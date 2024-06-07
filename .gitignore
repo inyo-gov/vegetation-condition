@@ -1,0 +1,14 @@
+# Ignore R history and session data
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+vegetation-condition.Rproj
+
+# Ignore Quarto configuration and build artifacts
+/.quarto/
+
+_targets/
+data/
+output/
+

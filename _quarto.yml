@@ -1,0 +1,22 @@
+project:
+  type: website
+  output-dir: docs
+
+website:
+  title: "Vegetation Condition"
+  favicon: "images/inyologo.png"
+  navbar:
+    left:
+      - href: index.qmd
+        text: Line Point Transects
+      - icon: github
+        href: https://github.com/inyo-gov/vegetation-condition
+
+format:
+  html:
+    theme: sandstone
+    linkcolor: blue
+    css: styles.css
+    toc: true
+
+editor: visual
