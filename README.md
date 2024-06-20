@@ -52,7 +52,7 @@ Perennial species cover is analyzed because annual species are not dependent on 
 
 ## Results
 
-The results section includes a comparison of control and wellfield parcel groups, rarefied to those parcels sampled every year since 1992. Linear trends for total cover, perennial herbaceous cover, and woody shrub cover are reported. Detailed maps showing parcel-level changes in perennial cover and grass cover are provided for each wellfield.
+The results section includes a comparison of control and wellfield parcel groups, rarefied to those parcels sampled every year since 1992. Linear trends for total cover, perennial herbaceous cover, and shrub cover are reported. Detailed maps showing parcel-level changes in perennial cover and grass cover are provided for each wellfield.
 
 ## Discussion
 
