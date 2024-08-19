@@ -277,36 +277,7 @@ parcel_datatable_chronic
 # note -update this function in functions library -- done 6/6/24
 ```
 
-## Perennial Cover and Grass Cover Change from baseline - all years
 
-Here's a reworded version of the paragraph:
-
----
-
-The table below includes parcel summaries averaged over the transect samples for all years in which each parcel was sampled. Each row represents a parcel for each year it was sampled. The table provides statistical test results comparing the baseline to the total perennial plant cover and the perennial grass cover as a subset of the total perennial cover. Two rows are included for each parcel: one summarizing the change in perennial grass cover from the baseline and one for the total perennial cover. The table allows for filtering, sorting, searching, and exporting of the filtered data.[^6]
-
-```{r}
-#| label: tbl-all-yr-parcel-deltas
-#| include: true
-#| tbl-column: body-outset
-
-parcels_deltas %>%
-  select(Parcel, Year,Cover, Cover.Delta, Grass, Grass.Delta, Shrub, Shrub.Delta) %>%
-  mutate(across(Cover:Shrub.Delta, round, 1)) %>%
-  datatable(extensions = c('Buttons','FixedColumns'),
-            filter = c("top"),
-            options = list(
-              dom = 'Blfrtip',
-              buttons = c('copy', 'csv', 'excel', 'pdf', 'print'),
-              scrollX = TRUE,
-              fixedColumns = list(leftColumns = 2, rightColumns = 0),
-              pageLength = 5,
-              autoWidth = TRUE)
-            )
-
-```
-
-[^6]: Each row represents either total perennial cover change or grass cover change. The statistical significance is indicated as 'significant' or 'not significant' ('ns'). The effect size is presented in units of cover (0-100) for the current year (estimate1) and baseline cover (estimate2). The statistical method used is noted (either Welch's Two Sample t-test or One Sample t-test, depending on baseline sample size, following Box I.C.1.a.ii). The table also includes the current year sample size (n.x), baseline sample size (n.y), test statistic (statistic), and p-value (p.value).
 
 
 ## Wellfield Maps
@@ -472,31 +443,46 @@ make_wellfield_table(deltas_ttest_att, 'Bairs-George')
 ```
 
 
-::: column-margin
-
-Governing documents are hosted at [inyowater.org](https://www.inyowater.org/) as of `r Sys.Date()`. [Green Book Box I.C.1.a.ii](https://www.inyowater.org/wp-content/uploads/2017/09/GBMemo_SCfeb2017.pdf) *Transects for monitoring vegetation response to pumping* was revised by the Technical Group and Inyo/LA Standing Committee in 2017 to reflect settlement on how to combine the vegetation monitoring programs that both Inyo County Water Department (1991-2015) and Los Angeles Department of Water and Power (2004-2015) had managed separately up until 2015. ICWD and LADWP began a jointly implemented monitoring program with inter-agency calibration training, and data sharing agreements in 2015 and, in 2017, the Inyo/LA Standing Committee approved the Green Book update that described these monitoring activities and identified statistical procedures to determine a measurable vegetation change from baseline conditions. - Inyo/LA Long Term Water Agreement ([LTWA](https://www.inyowater.org/documents/governing-documents/water-agreement/)) - LTWA Technical Appendix ([Green Book](https://www.inyowater.org/documents/governing-documents/green-book/))
-:::
-
-
 ## Discussion {#sec-conclusions}
 
 The methods outlined in this report have identified wellfield parcels that have been statistically below baseline for the past five consecutive years in terms of total perennial cover or perennial grass cover. This process follows the statistical framework established in Green Book Section I.C.1.a (Box I.C.I.a.ii.a), ensuring that the effects are measured reliably.
 
-### Key Findings
-
 The automated approach allows for consistent identification of parcels with significant changes. By focusing on both total perennial cover and perennial grass cover, the analysis provides a clear picture of vegetation health in groundwater-dependent areas.
-
-### Methodological Strengths
 
 Using statistical techniques, such as Welch's t-test and one-sample t-tests, ensures the robustness of detecting changes from the baseline. Integrating these methods into an R-based data pipeline enhances the transparency and reproducibility of the findings.
 
 ### Management Implications
 
-Flagged parcels indicate areas where groundwater pumping may be impacting vegetation. These areas will be further evaluated under Green Book Section I.C.1.b, *Determining Attributability*, to identify the specific causes of the observed changes.
+Flagged parcels indicate areas where groundwater pumping may have impacted vegetation in the past. These areas will be further evaluated under Green Book Section I.C.1.b, *Determining Attributability*, to identify the specific causes of the observed changes.
 
 ### Access to Detailed Information
 
-Detailed information on each flagged parcel can be investigated through the interactive platform at [Inyo Shiny](https://inyo.shinyapps.io/inyoShiny/). This resource provides parcel-specific data, including statistical summaries and trend analyses, supporting informed decision-making.
+Detailed information on each flagged parcel can be investigated through the interactive platform at [Inyo Shiny](https://inyo.shinyapps.io/inyoShiny/). This resource provides parcel-specific data, including statistical summaries and trend analyses.
 
-In summary, the methods and findings presented in this report provide a valuable tool for monitoring and managing groundwater-dependent vegetation in Owens Valley.
+
+## Appendix
+
+The table below includes parcel summaries averaged over the transect samples for all years in which each parcel was sampled. The table allows for filtering, sorting, searching, and exporting of the filtered data.
+
+```{r}
+#| label: tbl-all-yr-parcel-deltas
+#| include: true
+#| tbl-column: body-outset
+
+parcels_deltas %>%
+  select(Parcel, Year,Cover, Cover.Delta, Grass, Grass.Delta, Shrub, Shrub.Delta) %>%
+  mutate(across(Cover:Shrub.Delta, round, 1)) %>%
+  datatable(extensions = c('Buttons','FixedColumns'),
+            filter = c("top"),
+            options = list(
+              dom = 'Blfrtip',
+              buttons = c('copy', 'csv', 'excel', 'pdf', 'print'),
+              scrollX = TRUE,
+              fixedColumns = list(leftColumns = 2, rightColumns = 0),
+              pageLength = 5,
+              autoWidth = TRUE)
+            )
+
+```
+
 

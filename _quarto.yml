@@ -9,6 +9,8 @@ website:
     left:
       - href: index.qmd
         text: Line Point Transects
+      - href: lpt_etl.qmd
+        text: Data Source
       - icon: github
         href: https://github.com/inyo-gov/vegetation-condition
 

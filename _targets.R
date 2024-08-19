@@ -52,6 +52,17 @@ list(
   tar_target(streams_shp_file, "data/gisdata/streams.shp", format = 'file'),
   tar_target(streams_shp, st_read(streams_shp_file, quiet = TRUE)),
 
+
+  # April Depth to water updated every year ----
+  tar_target(dtw_file, paste0("data/dtw_",cYear,".csv"), format = "file"),
+  tar_target(dtw, read.csv(dtw_file)),
+  tar_target(dtw_pfix, mult_to_single_parcel_name(x = dtw)),
+
+  # remote sensing added after Sep 15
+  tar_target(rs_file, paste0("data/rs_",cYear,".csv"), format = "file"),
+  tar_target(rs, read.csv(rs_file)),
+  tar_target(rs_pfix, mult_to_single_parcel_name(x = rs)),
+
   # Parcel attributes----
   tar_target(attributes_file, "data/Attributes.csv", format = "file"),
   tar_target(attributes, read.csv(attributes_file)),
@@ -61,15 +72,6 @@ list(
   # Species functional traits----
   tar_target(species_file, "data/species.csv", format = "file"),
   tar_target(species, read.csv(species_file)),
-
-  # April Depth to water updated every year ----
-  tar_target(dtw_file, paste0("data/dtw_",cYear,".csv"), format = "file"),
-  tar_target(dtw, read.csv(dtw_file)),
-  tar_target(dtw_pfix, mult_to_single_parcel_name(x = dtw)),
-
-  tar_target(rs_file, paste0("data/rs_",cYear,".csv"), format = "file"),
-  tar_target(rs, read.csv(rs_file)),
-  tar_target(rs_pfix, mult_to_single_parcel_name(x = rs)),
 
   # ICWD Line Point----
   tar_target(icwd_file,paste0("data/lpt_ICWD_",cYear,".csv"), format = "file"),

@@ -1,0 +1,388 @@
+---
+title: "Line point data processing"
+description: "Line point data is transposed from paper data sheets to google sheets, one for each USGS quadrangle, and individual parcels within the quad are located in separate worksheets within the quad google sheet. This code extracts, transforms and loads these data at annual intervals into the database that is the backend for parameterized reports, dashboards and decision support tools downstream of this data."
+format: 
+  html: 
+    toc: true
+    toc-depth: 3
+    anchor-sections: true
+    smooth-scroll: true
+    html-math-method: katex
+date-modified: "2024-08-12"
+affiliation: "Inyo County Water Department"
+affiliation-url: inyowater.org
+categories: [Green Book - Box I.C.1.a.ii, ICWD Annual Report, 2024, vegetation condition]
+citation:
+  type: report
+  container-title: "Annual Report"
+  publisher: "Inyo County Water Department"
+  issued: "2024-08-12"
+  available-date: "2024-08-12"
+  url: https://inyo-gov.github.io/vegetation-condition/
+google-scholar: true
+---
+
+```{r setup, include=FALSE, message = FALSE, warning = FALSE}
+# library(targets)
+# library(tidyverse)
+# library(rmarkdown)
+# library(htmlwidgets)
+# library(sf)
+# library(tmap)
+# library(tmaptools)
+# library(ggpmisc)
+# library(ggpubr)
+# library(gt)
+# library(glue)
+# library(ggdist)
+# library(here)
+# library(ggstatsplot)
+
+library(DT)
+library(googlesheets4)  
+library(janitor)
+# library(readxl)
+library(dplyr)
+library(tidyr)
+library(stringr) 
+library(GWalkR)
+library(readr)
+
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+options(tidyverse.quiet = TRUE)
+```
+
+```{r}
+# Load species attribute data
+species_data <- read.csv("data/species.csv")
+```
+
+```{r}
+# Function to pivot and clean the data
+pivot_longer_icwd <- function(icwd_wide) {
+  # Ensure all columns starting with 'T' are numeric or NA
+  icwd_wide <- icwd_wide %>%
+    mutate(across(starts_with("T"), ~ {
+      if (is.list(.)) {
+        # Attempt to convert list elements to numeric, replacing with NA if it fails
+        sapply(., function(x) {
+          if (length(x) == 1 && is.numeric(x)) {
+            return(as.numeric(x))
+          } else {
+            return(NA)
+          }
+        })
+      } else {
+        return(as.numeric(.))
+      }
+    }))
+
+  # Identify columns that have been measured (i.e., have non-NA values)
+  measured_columns <- icwd_wide %>%
+    select(starts_with("T")) %>%
+    select(where(~ any(!is.na(.))))
+  
+  # If no measured columns exist, return an empty dataframe
+  if (ncol(measured_columns) == 0) {
+    return(tibble(Parcel = character(), Transect = character(), Code = character(), Cover = numeric()))
+  }
+  
+  # Pivot only the measured transect columns
+  icwd_wide %>%
+    pivot_longer(cols = all_of(names(measured_columns)),
+                 names_to = "Transect",
+                 values_to = "Cover",
+                 names_prefix = "T") %>%
+    filter(!is.na(Cover)) %>%
+    mutate(
+      Transect = as.character(Transect)  # Keep Transect as character type
+    ) %>%
+    rename(Code = SPECIES)  # Rename SPECIES to Code
+}
+
+```
+
+```{r}
+# Function to augment data with species attribute information
+add_species_agency_plotid <- function(long, cYear, species, entity) {
+  long %>%
+    mutate(Code = as.character(Code)) %>%  # Ensure Code is a character vector
+    left_join(species, by = c("Code" = "Code")) %>%
+    mutate(
+      source = 'Joint Monitoring 2015-current year',
+      source.abr = 'jm',
+      Year = cYear,
+      Entity = entity,
+      plotid = paste(Parcel, Transect, source.abr, sep = '_'),
+      plotid.full = paste(Parcel, Transect, source.abr, Entity, sep = '_'),
+      Cover = as.numeric(Cover)
+    ) %>%
+    select(
+      Parcel, Code, Transect, Cover, Year, Entity, plotid, Species, CommonName,
+      Order, Family, Genus, Lifecycle, Lifeform, Veg_Type, source, source.abr,
+      Phreatophyte, plotid.full
+    ) %>%
+    arrange(Parcel, Transect, Code)
+}
+
+```
+
+```{r}
+# Define the Google Sheets URLs (FSP and FSL quad examples)
+sheets_urls <- list(
+  FSP = "https://docs.google.com/spreadsheets/d/1cev3SPBJh8u_OD8o34RQU0uEmqLsy3f7iDbpKMi-KhY/edit#gid=0", 
+  FSL = "https://docs.google.com/spreadsheets/d/12hrMpa8keisGrU_iQR15RWreXX-jo_uYRu1pumB9Zag/edit#gid=0",
+  BLK = "https://docs.google.com/spreadsheets/d/1tLSZ0wbKJp27L8FH4w_p2ZIZZaXXd78JCYGvzj_bdFo/edit?gid=0",
+  IND = "https://docs.google.com/spreadsheets/d/16jFj_qxG5IQGI5NnhrAKwZTvZPouBa0h8mUc71zM5jw/edit?gid=0",
+  MAN = "https://docs.google.com/spreadsheets/d/1xvsUAobXBdvsVolQKevbsCkfsaOL7bhmfhi-6PH2KXI/edit?gid=0",
+  LAW = "https://docs.google.com/spreadsheets/d/1SMnleQgs2AktMGzbrQWAm1MevqifteFwalmXn06v8EY/edit?gid=0",
+  ABD = "https://docs.google.com/spreadsheets/d/1wFa2Ns1_mmngpadVyBjBsKbv4cM7DrbN7POYllVMV00/edit?gid=0",
+  PLC = "https://docs.google.com/spreadsheets/d/1Bu-4ujOIqWDFcfI0f3cxDx0OCPVYEOrfGblAj1OgYFc/edit?gid=0",
+  LNP = "https://docs.google.com/spreadsheets/d/10NlOl3Zxdwxkw_aFksbGLH4O8uvJYTY2XQhOV9j8NJc/edit?gid=0",
+  BIS = "https://docs.google.com/spreadsheets/d/1h_GQTJc1IDyEqC_E2eNv1dn8YneSH_dro6wjK6MONQI/edit?gid=0",
+  # TIN = "https://docs.google.com/spreadsheets/d/1rf6h9lP6_vQqAi2EB94_IBnFZE26telNrR_t7dhOCxY/edit?gid=0",
+  UNW = "https://docs.google.com/spreadsheets/d/1Kvk9EReJZDeWWx-AxZpC6v1gbijCx97qHdkwfX7RGTE/edit?gid=0"
+  
+  
+)
+```
+
+```{r, eval=FALSE}
+# Initialize an empty list to store dataframes
+all_data <- list()
+
+for (sheet_name in names(sheets_urls)) {
+  sheet_url <- sheets_urls[[sheet_name]]
+  
+  sheets <- sheet_names(sheet_url)  # Get sheet names from Google Sheets
+  
+  for (sheet in sheets) {
+    data <- read_sheet(sheet_url, sheet = sheet)  # Read each sheet
+    
+    # Print a preview of the data before filtering
+    # print(paste("Preview of data for sheet:", sheet))
+    # print(head(data))
+    
+    # Check the dimensions of the data
+    # print(paste("Number of rows:", nrow(data)))
+    # print(paste("Number of columns:", ncol(data)))
+
+    # Proceed with filtering and processing only if there are rows
+    if (nrow(data) > 0) {
+      cleaned_data <- data %>%
+        filter(!grepl("LIVE COVER|LIVE ACRES|STANDARD DEV|COEF OF VAR|ACCURACY|PRN|LIVE,STD,CV,Acc", QUAD, ignore.case = TRUE)) %>%
+        select(SPECIES, starts_with("T"), -contains("TOTAL"))  # Select only the relevant columns for species and transects
+      
+      # print(paste("Rows after filtering:", nrow(cleaned_data)))
+
+      # Continue processing if there's still data
+      if (nrow(cleaned_data) > 0) {
+        pivoted_data <- pivot_longer_icwd(cleaned_data) %>%
+          mutate(Parcel = sheet)  # Add the sheet name (Parcel) as a new column
+        
+        summarized_data <- pivoted_data %>%
+          group_by(Parcel, Transect, Code) %>%
+          summarize(Cover = sum(Cover, na.rm = TRUE), .groups = 'drop')  # Summing cover values
+        
+        augmented_data <- add_species_agency_plotid(summarized_data, cYear = 2024, species = species_data, entity = "ICWD")
+        
+        all_data[[length(all_data) + 1]] <- augmented_data
+      } else {
+        # print(paste("No rows left after filtering for sheet:", sheet))
+      }
+    } else {
+      # print(paste("No data found in sheet:", sheet))
+    }
+  }
+}
+
+# Combine all the data into one dataframe
+final_data <- bind_rows(all_data)
+
+# Check if the final data has rows
+if (nrow(final_data) > 0) {
+  final_data <- final_data %>%
+    arrange(Parcel, Transect, desc(Cover))
+  # print("Final data preview:")
+  # print(head(final_data))
+} else {
+  # print("No data to process in the final dataset.")
+}
+
+```
+
+
+
+```{r, eval=FALSE}
+# Define the directory where the files are located
+data_dir <- "data/2024/"
+
+# download the data if it has changed and read from excel or store as rds?
+
+# Get the list of Excel files
+files <- list.files(data_dir, pattern = "*.xlsx", full.names = TRUE)
+
+# Initialize an empty list to store dataframes
+all_data <- list()
+
+# Loop over each file and each sheet within the file
+for (file in files) {
+  sheets <- excel_sheets(file)
+  
+  for (sheet in sheets) {
+    data <- read_excel(file, sheet = sheet)
+    
+    # Remove rows based on keywords in the QUAD column
+    cleaned_data <- data %>%
+      filter(!grepl("LIVE COVER|LIVE ACRES|STANDARD DEV|COEF OF VAR|ACCURACY|PRN|LIVE,STD,CV,Acc", QUAD, ignore.case = TRUE)) %>%
+      select(SPECIES, starts_with("T"), -contains("TOTAL"))  # Select only the relevant columns for species and transects
+    
+    # Pivot the data and add metadata columns
+    pivoted_data <- pivot_longer_icwd(cleaned_data) %>%
+      mutate(#Quad = tools::file_path_sans_ext(basename(file)),  # Extract quad name from the filename
+             Parcel = sheet)  # Add the sheet name (Parcel) as a new column
+    
+     # Summarize to combine duplicate species entries by summing the cover values
+    summarized_data <- pivoted_data %>%
+      group_by(Parcel, Transect, Code) %>%
+      summarize(Cover = sum(Cover, na.rm = TRUE), .groups = 'drop')  # Summing cover values
+    
+    # Augment with species attribute information
+    augmented_data <- add_species_agency_plotid(summarized_data, cYear = 2024, species = species_data, entity = "ICWD")
+    
+    # Append the dataframe to the list
+    all_data[[length(all_data) + 1]] <- augmented_data
+  }
+}
+
+
+# Combine all the data into one dataframe
+final_data <- bind_rows(all_data)
+
+final_data <- final_data %>%
+  arrange(Parcel, Transect, desc(Cover))
+
+```
+
+
+
+```{r}
+# final_data %>% get_dupes(Parcel, Transect, Code) 
+```
+
+```{r}
+
+# Save to a CSV file
+# write.csv(final_data, "output/icwd_data2024.csv", row.names = FALSE)
+
+final_data <- read_csv("output/icwd_data2024.csv")
+```
+
+```{r}
+# Count total transects per year for each parcel
+transects_summary <- final_data %>%
+  group_by(Parcel, Year) %>%
+  summarize(Total_Transects = n_distinct(Transect)) %>%
+  arrange(Parcel, Year)
+
+# View the summary
+datatable(transects_summary)
+
+
+```
+
+```{r, eval=FALSE}
+# Load master data for 2022 and 2023
+master_data <- read.csv("data/lpt_MASTER_2023.csv")
+master_data <- master_data %>%
+  mutate(Transect = as.character(Transect))
+# Filter for the years 2022 and 2023
+# master_data_filtered <- master_data %>%
+  # filter(Year %in% c(2022, 2023))
+
+# Combine with the 2024 data
+combined_data <- bind_rows(master_data, final_data)
+```
+
+```{r, eval=FALSE}
+# Ensure all necessary columns are present and align correctly
+combined_data <- combined_data %>%
+  select(Parcel, Transect, Code, Cover, Year, Entity, plotid, Species, CommonName, Order, Family, Genus, Lifecycle, Lifeform, Veg_Type, source, source.abr, Phreatophyte, plotid.full) %>%
+  arrange(Parcel, Transect, Code, desc(Year))
+
+
+  
+```
+
+
+```{r, eval=FALSE}
+# Summarize data to ensure unique combinations
+combined_data_unique <- combined_data %>%
+  group_by(Parcel, Transect, Code, Year) %>%
+  summarize(Cover = mean(Cover, na.rm = TRUE),
+            n=n()) %>%
+  ungroup()
+
+
+```
+
+```{r, eval=FALSE}
+
+# Filter the combined data for 2023 and 2024
+data_2023_2024 <- combined_data %>%
+  filter(Year %in% c(2023, 2024)) %>%
+  select(Parcel, Transect, Code, Cover, Year)
+
+# Identify and resolve duplicates by summarizing Cover values
+data_2023_2024_unique <- data_2023_2024 %>%
+  group_by(Parcel, Transect, Code, Year) %>%
+  summarize(Cover = mean(Cover, na.rm = TRUE), .groups = 'drop')  # You can also use sum() or other functions
+
+# Reshape the data so that 2023 and 2024 covers are in separate columns
+data_wide <- data_2023_2024_unique %>%
+  pivot_wider(names_from = Year, values_from = Cover, values_fill = NA) %>%
+  rename(Cover_2023 = `2023`, Cover_2024 = `2024`)
+
+# View the reshaped data
+head(data_wide)
+
+```
+
+
+
+```{r, eval=FALSE}
+# Calculate percentage change
+data_wide <- data_wide %>%
+  mutate(
+    pct_change = ((Cover_2024 - Cover_2023) / Cover_2023) * 100
+  )
+
+```
+
+
+
+```{r, eval=FALSE}
+# Spread the summary table to make it more readable
+transects_summary_wide <- transects_summary %>%
+  spread(key = Year, value = Total_Transects)
+
+# View the summary in a wide format
+print(transects_summary_wide)
+```
+
+```{r, eval=FALSE}
+# Optionally, save the summary to a CSV file
+# write.csv(transects_summary_wide, "output/transects_summary_by_year.csv", row.names = FALSE)
+
+```
+
+
+```{r}
+
+
+
+GWalkR::gwalkr(final_data, dark = "dark", visConfigFile = 'data/config_gwalk2.json')
+
+```
+
+
