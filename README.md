@@ -18,26 +18,6 @@ The primary objectives of this report are:
 
 From September 1984 to November 1987, LADWP inventoried and mapped vegetation on LA-owned lands in Owens Valley into 2,126 polygons of similar vegetation type, covering 223,168 acres. The monitoring program focuses on a subset of these groundwater-dependent parcels that are affected by groundwater pumping.
 
-# Owens Valley Vegetation Condition Report
-
-## Introduction
-
-This repository contains the code and data for the Owens Valley Vegetation Condition Report, which is part of the Inyo-LA Technical Group's annual monitoring program. The report follows the guidelines described in the [Green Book Box I.C.1.a.ii](https://www.inyowater.org/wp-content/uploads/2017/09/GBMemo_SCfeb2017.pdf) for monitoring vegetation response to groundwater pumping. The goal is to identify and evaluate groundwater-dependent vegetation parcels that exhibit significant deviations from baseline conditions.
-
-## Objectives
-
-The primary objectives of this report are:
-1. To provide a summary of the annual monitoring program.
-2. To flag groundwater-dependent vegetation parcels in wellfield areas with significant deviations from the 1984-87 vegetation baseline.
-3. To identify parcels that have been below baseline for five consecutive years.
-4. To corroborate significant trends using NDVI time series data.
-
-## Data and Methods
-
-### Baseline Data
-
-From September 1984 to November 1987, LADWP inventoried and mapped vegetation on LA-owned lands in Owens Valley into 2,126 polygons of similar vegetation type, covering 223,168 acres. The monitoring program focuses on a subset of these groundwater-dependent parcels that are affected by groundwater pumping.
-
 ### Monitoring Sample Size
 
 Parcels were selected based on several criteria, including the presence of permanent monitoring sites, proximity to pumping wells, and availability of past and current land use data. Over the years, the number of sampled parcels has varied due to staffing availability, with a total of 192 parcels sampled at least once after the baseline period.
@@ -52,7 +32,7 @@ Perennial species cover is analyzed because annual species are not dependent on 
 
 ## Results
 
-The results section includes a comparison of control and wellfield parcel groups, rarefied to those parcels sampled every year since 1992. Linear trends for total cover, perennial herbaceous cover, and woody shrub cover are reported. Detailed maps showing parcel-level changes in perennial cover and grass cover are provided for each wellfield.
+The results section includes a comparison of control and wellfield parcel groups, rarefied to those parcels sampled every year since 1992. Linear trends for total cover, perennial herbaceous cover, and shrub cover are reported. Detailed maps showing parcel-level changes in perennial cover and grass cover are provided for each wellfield.
 
 ## Discussion
 
