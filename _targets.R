@@ -25,7 +25,7 @@ tar_option_set(
 # targets list----
 list(
   # Current YEAR parameter----
-  tar_target(cYear, 2023),
+  tar_target(cYear, 2024),
 
   # Previous Year
   tar_target(pYear, cYear - 1),
@@ -59,7 +59,8 @@ list(
   tar_target(dtw_pfix, mult_to_single_parcel_name(x = dtw)),
 
   # remote sensing added after Sep 15
-  tar_target(rs_file, paste0("data/rs_",cYear,".csv"), format = "file"),
+  #tar_target(rs_file, paste0("data/rs_",cYear,".csv"), format = "file"),
+  tar_target(rs_file, paste0("data/rs_2023.csv"), format = "file"),
   tar_target(rs, read.csv(rs_file)),
   tar_target(rs_pfix, mult_to_single_parcel_name(x = rs)),
 

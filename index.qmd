@@ -8,16 +8,16 @@ format:
     anchor-sections: true
     smooth-scroll: true
     html-math-method: katex
-date-modified: "2023-11-01"
+date-modified: "2024-09-12"
 affiliation: "Inyo County Water Department"
 affiliation-url: inyowater.org
-categories: [Green Book - Box I.C.1.a.ii, ICWD Annual Report, 2023, vegetation condition]
+categories: [Green Book - Box I.C.1.a.ii, ICWD Annual Report, 2024-2025, vegetation condition]
 citation:
   type: report
   container-title: "Annual Report"
   publisher: "Inyo County Water Department"
-  issued: "2023-10-19"
-  available-date: "2023-10-19"
+  issued: "2024-09-12"
+  available-date: "2024-09-12"
   url: https://inyo-gov.github.io/vegetation-condition/
 google-scholar: true
 ---
@@ -39,6 +39,7 @@ library(ggdist)
 library(here)
 library(ggstatsplot)
 library(janitor)
+library(readxl)
 
 knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
 options(tidyverse.quiet = TRUE)

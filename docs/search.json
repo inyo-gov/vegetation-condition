@@ -32,14 +32,14 @@
     "href": "index.html#data",
     "title": "Owens Valley Vegetation Condition",
     "section": "Data",
-    "text": "Data\n\nField Data (line-point-intercept)\nIn 2023, 159 were sampled by ICWD and LADWP.\nThis report focuses on perennial species cover, as annual species are not dependent on groundwater. Perennial cover is further categorized into grass, non-graminoid herbaceous (herb), and shrub. To analyze changes in the composition of total perennial cover, we calculated the proportion of shrub, herb, and grass cover as fractions of the total perennial cover. Transect data are summarized for each parcel and year using the arithmetic average, creating a historical record of cover over time for each parcel."
+    "text": "Data\n\nField Data (line-point-intercept)\nIn 2024, 145 were sampled by ICWD and LADWP.\nThis report focuses on perennial species cover, as annual species are not dependent on groundwater. Perennial cover is further categorized into grass, non-graminoid herbaceous (herb), and shrub. To analyze changes in the composition of total perennial cover, we calculated the proportion of shrub, herb, and grass cover as fractions of the total perennial cover. Transect data are summarized for each parcel and year using the arithmetic average, creating a historical record of cover over time for each parcel."
   },
   {
     "objectID": "index.html#wellfield-control-group-comparison",
     "href": "index.html#wellfield-control-group-comparison",
     "title": "Owens Valley Vegetation Condition",
     "section": "Wellfield Control Group Comparison",
-    "text": "Wellfield Control Group Comparison\nIn the early 1990s, parcels in Owens Valley were classified to assess the impact of pumping on vegetation. Parcels were designated as either part of a wellfield group, potentially affected by pumping, or a control group, where the impact on water table drawdown was determined to be negligible4. In the 2000s, a rarefied subset of these parcels, sampled every year since 1992, was selected and has continued to be sampled annually up to 2023. This subset includes 13 control parcels and 31 wellfield parcels. For these rarefied parcels, averages are plotted below to compare the groups over time, with linear trends reported separately for total cover, perennial herbaceous cover, and woody shrub cover. In 2023, 49 control parcels and 94 wellfield parcels were sampled."
+    "text": "Wellfield Control Group Comparison\nIn the early 1990s, parcels in Owens Valley were classified to assess the impact of pumping on vegetation. Parcels were designated as either part of a wellfield group, potentially affected by pumping, or a control group, where the impact on water table drawdown was determined to be negligible4. In the 2000s, a rarefied subset of these parcels, sampled every year since 1992, was selected and has continued to be sampled annually up to 2024. This subset includes 13 control parcels and 31 wellfield parcels. For these rarefied parcels, averages are plotted below to compare the groups over time, with linear trends reported separately for total cover, perennial herbaceous cover, and woody shrub cover. In 2024, 50 control parcels and 94 wellfield parcels were sampled."
   },
   {
     "objectID": "index.html#wellfield-vs-control-group---rarefied-subset-1992-current",
@@ -53,7 +53,7 @@
     "href": "index.html#current-year-parcel-summaries",
     "title": "Owens Valley Vegetation Condition",
     "section": "Current year parcel summaries",
-    "text": "Current year parcel summaries\nParcels significantly below baseline in 2023.\n\n\n?(caption)\n\n\n\n\n\n\n\n\n\n\n\n\nParcels significantly below baseline for the past five years or more.\n\n\n?(caption)"
+    "text": "Current year parcel summaries\nParcels significantly below baseline in 2024.\n\n\n?(caption)\n\n\n\n\n\n\n\n\n\n\n\n\nParcels significantly below baseline for the past five years or more.\n\n\n?(caption)"
   },
   {
     "objectID": "index.html#perennial-cover-and-grass-cover-change-from-baseline---all-years",
@@ -95,6 +95,6 @@
     "href": "lpt_etl.html",
     "title": "Line point data processing",
     "section": "",
-    "text": "CitationBibTeX citation:@report{2024,\n  author = {},\n  publisher = {Inyo County Water Department},\n  title = {Line Point Data Processing},\n  date = {2024-08-12},\n  url = {https://inyo-gov.github.io/vegetation-condition/},\n  langid = {en}\n}\nFor attribution, please cite this work as:\n“Line Point Data Processing.” 2024. Annual Report.\nInyo County Water Department. https://inyo-gov.github.io/vegetation-condition/."
+    "text": "# A tibble: 6 × 19\n  Parcel Code   Transect Cover  Year Entity plotid      Species CommonName Order\n  &lt;chr&gt;  &lt;chr&gt;     &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;chr&gt;  &lt;chr&gt;       &lt;chr&gt;   &lt;chr&gt;      &lt;chr&gt;\n1 ABD012 ARTRT         1    13  2024 ICWD   ABD012_1_jm Artemi… sagebrush… Aste…\n2 ABD012 PSPO          1     3  2024 ICWD   ABD012_1_jm Psorot… dalea, Do… Faba…\n3 ABD012 ERNA10        1     2  2024 ICWD   ABD012_1_jm Ericam… rabbitbru… Aste…\n4 ABD012 ATCA2         1     0  2024 ICWD   ABD012_1_jm Atripl… saltbush,… Cary…\n5 ABD012 ATPO          1     0  2024 ICWD   ABD012_1_jm Atripl… saltbush,… Cary…\n6 ABD012 ERBR7         1     0  2024 ICWD   ABD012_1_jm Eriogo… buckwheat… Poly…\n# ℹ 9 more variables: Family &lt;chr&gt;, Genus &lt;chr&gt;, Lifecycle &lt;chr&gt;,\n#   Lifeform &lt;chr&gt;, Veg_Type &lt;chr&gt;, source &lt;chr&gt;, source.abr &lt;chr&gt;,\n#   Phreatophyte &lt;chr&gt;, plotid.full &lt;chr&gt;\n\n\n\n\n[1] \"A\"      \"copyA\"  \"Sheet1\"\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nCitationBibTeX citation:@report{2024,\n  author = {},\n  publisher = {Inyo County Water Department},\n  title = {Line Point Data Processing},\n  date = {2024-08-12},\n  url = {https://inyo-gov.github.io/vegetation-condition/},\n  langid = {en}\n}\nFor attribution, please cite this work as:\n“Line Point Data Processing.” 2024. Annual Report.\nInyo County Water Department. https://inyo-gov.github.io/vegetation-condition/."
   }
 ]

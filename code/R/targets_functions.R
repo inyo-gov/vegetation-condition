@@ -72,18 +72,27 @@ mult_to_single_parcel_name <- function(x) {
   x$Parcel[x$Parcel == "TIN028_FSP022_FSP019"] <- "TIN028"
   x$Parcel[x$Parcel == "TIN028_FSP019_FSP022"] <- "TIN028"
   x$Parcel[x$Parcel == "MAN006_IND229"] <- "MAN006"
+  x$Parcel[x$Parcel == "MAN006/IND229"] <- "MAN006"
   x$Parcel[x$Parcel == "LAW137_PLC210"] <- "LAW137"
+  x$Parcel[x$Parcel == "LAW137/PLC210"] <- "LAW137"
   x$Parcel[x$Parcel == "LAW108_FSL047"] <- "LAW108"
+  x$Parcel[x$Parcel == "LAW108/FSL047"] <- "LAW108"
   x$Parcel[x$Parcel == "LAW109_FSL048"] <- "FSL048"
   x$Parcel[x$Parcel == "IND163_BEE017"] <- "IND163"
   x$Parcel[x$Parcel == "IND139_MAN005"] <- "IND139"
+  x$Parcel[x$Parcel == "IND139/MAN005"] <- "IND139"
   x$Parcel[x$Parcel == "IND024_BLK103"] <- "IND024"
+  x$Parcel[x$Parcel == "IND024/BLK103"] <- "IND024"
   x$Parcel[x$Parcel == "FSP004_BGP188"] <- "FSP004"
+  x$Parcel[x$Parcel == "FSP004/BGP188"] <- "FSP004"
   x$Parcel[x$Parcel == "FSP006_BGP182"] <- "FSP006"
+  x$Parcel[x$Parcel == "FSP006/BGP182"] <- "FSP006"
   x$Parcel[x$Parcel == "ABD012_BLK029"] <- "ABD012"
+  x$Parcel[x$Parcel == "ABD012/BLK029"] <- "ABD012"
   x$Parcel[x$Parcel == "BLK002_TIN061"] <- "BLK002"
   x$Parcel[x$Parcel == "TIN061_BLK002"] <- "BLK002"
   x$Parcel[x$Parcel == "BIS055_FSL214"] <- "BIS055"
+  x$Parcel[x$Parcel == "BIS055/FSL214"] <- "BIS055"
   x$Parcel[x$Parcel == "BIS025_FSL157"] <- "BIS025"
   x$Parcel[x$Parcel == "BIS026_FSL156"] <- "BIS026"
   x$Parcel[x$Parcel == "BLK002_TIN061"] <- "BLK002"
@@ -823,7 +832,6 @@ make_parcel_data_table_chronic <- function(deltas_ttest_att, cYear) {
 #' @return A tmap object with arranged maps.
 #' @export
 #' @examples
-#' panel_map(cYear, parcels_shp_ttest, "Laws", or, streams, canals, laa, lakes, monit.sites)
 panel_map <- function(cYear, parcels_shp_ttest, wf, or, streams, canals, laa, lakes, monit.sites) {
 
   # Filter parcels for the specified wellfield
@@ -837,19 +845,26 @@ panel_map <- function(cYear, parcels_shp_ttest, wf, or, streams, canals, laa, la
     tm_polygons(col = "Grass", breaks = c(0, 5, 10, 15, 20, 25, 30, 35, 40, 50, 60, Inf), palette = "Greens", title.col = "PCL_merged", id = "PCL_merged", group = "Wellfield - Parcels")
 
   # Create grass delta map
-  tmgrassd <- tm_shape(limit, group = 'Wellfield - Parcels') +
+  tmgrassd <-
+    tm_shape(limit, group = 'Wellfield - Parcels') +
     tm_polygons(col = "Grass.Delta", breaks = c(-40, -30, -20, -10, -5, 5, 10, 20, 30, 40, Inf), palette = "RdYlGn", title.col = "PCL_merged", id = "PCL_merged", group = "Wellfield - Parcels") +
+
     tm_shape(canals, group = 'Canals') +
     tm_lines(col = "blue", scale = .6, group = 'Canals') +
+
     tm_shape(streams, group = 'Streams') +
     tm_lines(col = "blue", scale = 1, group = 'Streams') +
+
     tm_shape(monit.sites, group = 'On/Off Monitoring Sites') +
     tm_text("SITE", col = "white", size = .5, remove.overlap = TRUE, shadow = TRUE, group = 'Labels', auto.placement = .1, bg.color = 'blue') +
     tm_symbols(col = "blue", scale = .05, title.col = "SITE", id = "SITE", group = 'On/Off Monitoring Sites') +
+
     tm_shape(or, group = 'River') +
     tm_lines(col = "blue", scale = 1, group = 'River') +
+
     tm_shape(laa, group = 'LAA') +
     tm_lines(col = "blue", scale = 1, group = 'LAA') +
+
     tm_shape(lakes, group = 'Lakes') +
     tm_polygons(col = "blue", scale = 1, group = 'Lakes')
 
@@ -858,19 +873,26 @@ panel_map <- function(cYear, parcels_shp_ttest, wf, or, streams, canals, laa, la
     tm_polygons(col = "Cover", breaks = c(0, 5, 10, 15, 20, 25, 30, 35, 40, 50, 60, Inf), palette = "Greens", title.col = "PCL_merged", id = "PCL_merged", group = "Wellfield - Parcels")
 
   # Create cover delta map
-  tmcovd <- tm_shape(limit, group = 'Wellfield - Parcels') +
+  tmcovd <-
+    tm_shape(limit, group = 'Wellfield - Parcels') +
     tm_polygons(col = "Cover.Delta", breaks = c(-40, -30, -20, -10, -5, 5, 10, 20, 30, 40, Inf), palette = "RdYlGn", title.col = "PCL_merged", id = "PCL_merged", group = "Wellfield - Parcels") +
+
     tm_shape(canals, group = 'Canals') +
     tm_lines(col = "blue", scale = .6, group = 'Canals') +
+
     tm_shape(streams, group = 'Streams') +
     tm_lines(col = "blue", scale = .7, group = 'Streams') +
+
     tm_shape(monit.sites, group = 'On/Off Monitoring Sites') +
     tm_text("SITE", col = "white", size = .5, remove.overlap = TRUE, shadow = TRUE, group = 'Labels', auto.placement = .1, bg.color = 'blue') +
     tm_symbols(col = "blue", scale = .05, title.col = "SITE", id = "SITE", group = 'On/Off Monitoring Sites') +
+
     tm_shape(or, group = 'River') +
     tm_lines(col = "blue", scale = 1, group = 'River') +
+
     tm_shape(laa, group = 'LAA') +
     tm_lines(col = "blue", scale = 1, group = 'LAA') +
+
     tm_shape(lakes, group = 'Lakes') +
     tm_polygons(col = "blue", scale = 1, group = 'Lakes')
 
