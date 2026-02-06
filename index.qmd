@@ -347,6 +347,141 @@ DT::datatable(
   )
 ```
 
+Table 2 lists **control and other parcels** (all parcels not in the wellfield group): Type = Control (C) or Type NA/blank. Same columns as Table 1.
+
+### Table 2: Control and other parcels (non-wellfield)
+
+```{r tbl-control-parcels}
+#| column: screen
+control_year_deltas <- deltas_ttest_att %>%
+  filter(Type != "W" | is.na(Type)) %>%
+  mutate(
+    below_cover = dplyr::coalesce(Cover_sig.counter, 0) > 0,
+    below_grass = dplyr::coalesce(Grass_sig.counter, 0) > 0,
+    below_shrub = Shrub.Delta < 0,
+    below_types = pmap_chr(
+      list(below_cover, below_grass, below_shrub),
+      ~ paste(
+        c(
+          if (isTRUE(..1)) "Cover" else NULL,
+          if (isTRUE(..2)) "Grass" else NULL,
+          if (isTRUE(..3)) "Shrub" else NULL
+        ),
+        collapse = "/"
+      )
+    )
+  )
+
+control_summary <- control_year_deltas %>%
+  left_join(first_reinv_years, by = "Parcel") %>%
+  mutate(
+    last_cover_year = mapply(last_year_from_counter, Cover_sig.counter, first_reinv_year),
+    last_grass_year = mapply(last_year_from_counter, Grass_sig.counter, first_reinv_year),
+    last_at_baseline = pmap_chr(
+      list(below_types, last_cover_year, last_grass_year),
+      function(types, lc, lg) {
+        parts <- c()
+        if (str_detect(types, "Cover") && is.finite(lc)) {
+          parts <- c(parts, if (lc == 1986) "Cover baseline" else paste0("Cover ", lc))
+        }
+        if (str_detect(types, "Grass") && is.finite(lg)) {
+          parts <- c(parts, if (lg == 1986) "Grass baseline" else paste0("Grass ", lg))
+        }
+        if (length(parts) == 0) NA_character_ else paste(parts, collapse = " / ")
+      }
+    ),
+    chronic = ifelse(
+      dplyr::coalesce(Cover_sig.counter, 0) > 5 |
+        dplyr::coalesce(Grass_sig.counter, 0) > 5,
+      "Yes",
+      "No"
+    )
+  ) %>%
+  left_join(
+    dtw_pfix %>%
+      group_by(Parcel, Year) %>%
+      summarise(DTW = mean(DTW, na.rm = TRUE), .groups = "drop") %>%
+      group_by(Parcel) %>%
+      mutate(
+        rank = rank(DTW, ties.method = "min"),
+        n = n(),
+        DTW_pct = ifelse(n > 1, 100 * (1 - (rank - 1) / (n - 1)), NA_real_)
+      ) %>%
+      ungroup() %>%
+      filter(Year == cYear) %>%
+      select(Parcel, DTW, DTW_pct),
+    by = "Parcel"
+  ) %>%
+  select(
+    Parcel,
+    WF = wellfield,
+    Type,
+    GB = GB_TYPE,
+    Cover_D = Cover.Delta,
+    Grass_D = Grass.Delta,
+    Shrub_D = Shrub.Delta,
+    Cover_Yrs = Cover_sig.counter,
+    Grass_Yrs = Grass_sig.counter,
+    Chronic = chronic,
+    Below = below_types,
+    Last_Base = last_at_baseline,
+    DTW,
+    DTW_pct,
+    pGrass,
+    pShrub,
+    Cover,
+    Grass,
+    Shrub
+  ) %>%
+  arrange(desc(Chronic), Parcel)
+
+DT::datatable(
+  control_summary,
+  filter = "top",
+  options = list(
+    dom = "Blfrtip",
+    buttons = c("copy", "csv", "excel", "pdf", "print"),
+    scrollX = TRUE,
+    scrollCollapse = TRUE,
+    autoWidth = FALSE,
+    pageLength = 10
+  ),
+  width = "100%",
+  class = "compact stripe nowrap"
+) %>%
+  DT::formatRound(
+    columns = c("Cover_D", "Grass_D", "Shrub_D", "DTW", "DTW_pct", "pGrass", "pShrub", "Cover", "Grass", "Shrub"),
+    digits = 1
+  )
+```
+
+### Below vs. above baseline by group
+
+Below baseline = cover and/or perennial grass below baseline in the current year (`Cover.Delta` \< 0 or `Grass.Delta` \< 0).
+
+```{r tbl-below-above-pct}
+#| column: screen
+below_baseline <- (deltas_ttest_att$Cover.Delta < 0) | (deltas_ttest_att$Grass.Delta < 0)
+deltas_ttest_att$below_baseline <- below_baseline
+
+pct_by_group <- deltas_ttest_att %>%
+  mutate(
+    group = if_else(Type == "W", "Wellfield", "Control / other")
+  ) %>%
+  group_by(group) %>%
+  summarise(
+    N = n(),
+    N_below = sum(below_baseline, na.rm = TRUE),
+    N_above = N - N_below,
+    Pct_below = round(100 * N_below / N, 1),
+    Pct_above = round(100 * N_above / N, 1),
+    .groups = "drop"
+  ) %>%
+  select(Group = group, N, `N below baseline` = N_below, `N at/above baseline` = N_above, `% below` = Pct_below, `% above` = Pct_above)
+
+knitr::kable(pct_by_group, align = c("l", "r", "r", "r", "r", "r"))
+```
+
 ## Wellfield vs. Control Group Comparison
 
 ```{r wellfield-control-plot, fig.width=9, fig.height=5, fig.cap="Figure: Baseline (1986) versus current year cover by parcel type. Boxplots summarize total cover, grass, and shrub for control and wellfield parcels; significance labels indicate baseline vs current-year differences."}
@@ -496,7 +631,7 @@ Vegetation in Owens Valley is monitored annually to detect and attribute changes
 
 ### Interpretation
 
-**Direction of trends (with statistical significance):** Control parcels show no statistically significant linear trends in cover, grass, or shrub. Wellfield parcels show statistically significant **increasing** linear trends in cover and shrub; wellfield grass shows no statistically significant trend. P-values are reported in the “Parcel Trends Over Time” section above.
+**Direction of trends (with statistical significance):** Control parcel group average shows no statistically significant linear trends in cover, grass, or shrub. Wellfield parcel group average shows statistically significant **increasing** linear trends in cover and shrub; wellfield perennial grass shows no statistically significant trend within this subset. P-values are reported in the “Parcel Trends Over Time” section above.
 
 **Flagged parcels:** Flagged parcels indicate measurable (statistically significant) deviations from baseline. Whether these changes are attributable to pumping vs. other factors (e.g., drought, land use) are evaluated under **Green Book Section I.C.1.b**.
 
