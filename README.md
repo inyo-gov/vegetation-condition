@@ -38,6 +38,10 @@ The results section includes a comparison of control and wellfield parcel groups
 
 The methods outlined in this report automatically flag wellfield parcels that have been statistically below baseline for the past five consecutive years in terms of total perennial cover or perennial grass cover. The measurability of the effect has been determined according to Green Book Section I.C.1.a. Steps to determine the causation of the measurable change are outlined in Green Book Section I.C.1.b. Detailed information on each flagged parcel is available for further investigation.
 
+## Annual updates
+
+See **[ANNUAL_UPDATE.md](ANNUAL_UPDATE.md)** for step-by-step instructions to update the report each year: set `cYear` in `_targets.R`, add the year’s line-point files, parcel attributes, and depth-to-water file, then run the pipeline and render the site. The same doc outlines a future option to push master LPT, attributes, and DTW to a cloud DB (e.g. MotherDuck) so other projects can use the same source of truth without copying files.
+
 ## Repository Structure
 
 - `code/`: Contains R scripts for data processing and analysis.

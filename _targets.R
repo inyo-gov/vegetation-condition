@@ -24,6 +24,9 @@ tar_option_set(
 )
 # targets list----
 list(
+  # Optional: MotherDuck/DuckDB sync (see ANNUAL_UPDATE.md)
+  # Uncomment and define connect_motherduck(); add targets that write
+  # lpt_updated_master, attributes_pfix, dtw to cloud so other projects can read.
   # tar_target(
   #   motherduck_con,
   #   connect_motherduck(),
