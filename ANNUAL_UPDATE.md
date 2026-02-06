@@ -33,6 +33,8 @@ Place files under **`data/`**. Required for the annual run:
   - `pdf_file <- "Parcel_TimeSeries_Customized06b_20XX.pdf"` (same year in the filename)
 - **When to run:** After `tar_make()` (so targets and any `rs_pfix`/remote sensing are up to date). Run from the project root: `Rscript pdf_stacked_timeseries_call.R`. The PDF is written to the project root unless you change `pdf_file` to a path.
 
+**Downstream (inyoShiny):** After `tar_make()`, four artifacts for the inyoShiny app are written: `data/dtw_pfix_YYYY.csv`, `data/rs_YYYY.csv`, `data/lpt_MASTER_YYYY.csv`, and `data/parcels_YYYY.rds`. Copy these into inyoShiny’s `data/` (see inyoShiny’s `docs/HOW_TO_UPDATE_ANNUALLY.md`).
+
 Optional / less frequent:
 
 - **DTW history:** `_targets.R` references `data/dtw_2024.csv` for historical DTW. If you need a different baseline year, edit `dtw_hist_file` in `_targets.R`.
@@ -127,7 +129,7 @@ To avoid copying the same datasets across repos, the plan is to push the **maste
 - **Other projects:**  
   - Connect to the same MotherDuck database (or a read-only view) and query the latest data; no need to copy CSVs between projects.
 
-### Implementation notes (when you add it)
+### Implementation notes
 
 - **R:** Use `duckdb` and `MotherDuck` (or environment variable `MOTHERDUCK_TOKEN`) to connect; create tables or replace data from the targets pipeline.  
 - **`_targets.R`:** There is already a commented `motherduck_con` target; uncomment and add targets that depend on `lpt_updated_master_csv`, `attributes_pfix`, `dtw_pfix`, and write to the cloud.  

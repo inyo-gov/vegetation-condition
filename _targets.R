@@ -74,6 +74,15 @@ list(
   tar_target(dtw_current, read.csv(dtw_file) %>% select(Parcel, DTW, Year)),
   tar_target(dtw, bind_rows(dtw_hist, dtw_current) %>% distinct(Parcel, Year, .keep_all = TRUE)),
   tar_target(dtw_pfix, mult_to_single_parcel_name(x = dtw)),
+  tar_target(
+    dtw_pfix_csv,
+    {
+      dtw_path <- paste0("data/dtw_pfix_", cYear, ".csv")
+      readr::write_csv(dtw_pfix, dtw_path)
+      dtw_path
+    },
+    format = "file"
+  ),
 
   # remote sensing added after Sep 15
   tar_target(rs_prev_file, paste0("data/rs_", pYear, ".csv"), format = "file"),
@@ -172,6 +181,15 @@ list(
 
   # parcel summary functional type----
   tar_target(parcels, summarise_to_parcel(x= transects)),
+  tar_target(
+    parcels_rds,
+    {
+      parcels_path <- paste0("data/parcels_", cYear, ".rds")
+      saveRDS(parcels, parcels_path)
+      parcels_path
+    },
+    format = "file"
+  ),
   tar_target(parcels_deltas, add_parcel_deltas(parcels)),
   tar_target(parcels_deltas_yoy, add_parcel_deltas_yoy(parcels, cYear)),
 
