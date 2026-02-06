@@ -1,0 +1,505 @@
+---
+title: "Green Book Section I.C.1.a Parcel Profiles"
+subtitle: "QA/QC — Wellfield Parcels Below Baseline"
+author: "Inyo County Water Department"
+date: "`r Sys.Date()`"
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    number-sections: true
+    page-layout: full
+---
+
+```{r setup, include=FALSE, warning=FALSE, message=FALSE}
+library(targets)
+library(tidyverse)
+library(knitr)
+library(ggplot2)
+library(here)
+library(patchwork)
+library(sf)
+library(tmap)
+library(tmaptools)
+
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+options(tidyverse.quiet = TRUE)
+```
+
+```{r load-data}
+# Same pattern as index.qmd: source report helpers and load targets
+source(here("code", "R", "targets_functions.R"))
+source(here("code", "R", "report_functions.R"))
+
+targets <- c(
+  "cYear",
+  "parcels_deltas",
+  "deltas_ttest_att",
+  "dtw_pfix",
+  "rs_pfix",
+  "parcels",
+  "parcels_shp_ttest",
+  "canals_shp",
+  "streams_shp",
+  "monsites_shp",
+  "or_shp",
+  "laa_shp",
+  "lakes_shp",
+  "attributes_pfix"
+)
+withr::with_dir(rprojroot::find_root("_targets.R"), tar_load(targets))
+
+# Create parcel-pumping linkage once (cached) for parcel profiles
+pumping_linkage <- NULL
+if (exists("create_parcel_pumping_linkage")) {
+  tryCatch({
+    linkage_result <- create_parcel_pumping_linkage(
+      n_nearest_wells = 10,
+      max_distance_m = 10000,
+      exempt_max_distance_m = 15000
+    )
+    pumping_linkage <- linkage_result$parcel_annual_pumping
+  }, error = function(e) {
+    message("Pumping linkage not available: ", e$message)
+  })
+} else {
+  message("Pumping linkage function not available; skipping pumping summaries.")
+}
+```
+
+## Purpose
+
+This page provides **QA/QC output** of parcel-level profiles for **wellfield parcels** that are **chronically below baseline**: cover and/or grass has been below baseline for **more than 5 consecutive years** (`Cover_sig.counter` or `Grass_sig.counter` \> 5). Control parcels are excluded. Profiles summarize parcel attributes, significance counters, proportional grass change, and time-series trajectories for cover, grass, and shrub.
+
+Parcels are organized by **wellfield, north to south**: **Laws**, **Control**, **Big Pine**, **Taboose-Aberdeen**, **Thibaut Sawmill**, **Independence Oak**, **Symmes Shepherd**, **Bairs Georges**. Control parcels are located throughout the valley, just outside the zone of pumping influence.
+
+For On/Off pumping management and soil‑moisture thresholds, see the **Soil‑Plant Water Balance and Groundwater** page: <https://inyo-gov.github.io/pumping-management/>.
+
+## Parcel order
+
+Profiled parcels are ordered by wellfield (north to south) as above, then by latitude (northern parcels first) within each group. For **all** parcels and filters (e.g. Cover_Yrs or Grass_Yrs \> 0), see the [Annual Summary](index.qmd) parcel table. For a map of parcels, see [Annual Summary](index.qmd#fig-gbtype-interactive-map).
+
+## Parcel Profiles (Wellfield Parcels Chronic Below Baseline — Cover or Grass \> 5 Years)
+
+```{r parcel-profiles, results='asis'}
+old_opts <- knitr::opts_chunk$get()
+knitr::opts_chunk$set(fig.height = 26, fig.width = 30, out.width = "100%", fig.align = "center")
+on.exit(knitr::opts_chunk$set(old_opts), add = TRUE)
+
+# Wellfield order north to south (Control = reference parcels throughout valley)
+wellfield_order <- c(
+  "Laws", "Control", "Big Pine", "Taboose-Aberdeen",
+  "Thibaut Sawmill", "Independence Oak", "Symmes Shepherd", "Bairs Georges"
+)
+
+# Only wellfield parcels (exclude Control) where cover OR grass has been below baseline for more than 5 years
+# wellfield comes from deltas_ttest_att (join_summaries already joins attributes_pfix); normalize name if CSV has "Wellfield"
+profile_parcels <- deltas_ttest_att %>%
+  filter(
+    Type == "W",
+    dplyr::coalesce(Cover_sig.counter, 0) > 5 | dplyr::coalesce(Grass_sig.counter, 0) > 5
+  )
+if ("Wellfield" %in% names(profile_parcels) && !"wellfield" %in% names(profile_parcels)) {
+  profile_parcels <- profile_parcels %>% rename(wellfield = Wellfield)
+}
+profile_parcels <- profile_parcels %>%
+  left_join(
+    attributes_pfix %>% select(Parcel, any_of(c("y.cent", "y_cent", "Y.cent"))),
+    by = "Parcel"
+  ) %>%
+  mutate(
+    wellfield_group = case_when(
+      Type == "C" ~ "Control",
+      grepl("Laws", wellfield, ignore.case = TRUE) ~ "Laws",
+      grepl("Big Pine", wellfield, ignore.case = TRUE) ~ "Big Pine",
+      grepl("Taboose|Aberdeen", wellfield, ignore.case = TRUE) ~ "Taboose-Aberdeen",
+      grepl("Thibaut|Sawmill", wellfield, ignore.case = TRUE) ~ "Thibaut Sawmill",
+      grepl("Independence|Oak", wellfield, ignore.case = TRUE) ~ "Independence Oak",
+      grepl("Symmes|Shepherd", wellfield, ignore.case = TRUE) ~ "Symmes Shepherd",
+      grepl("Bairs|Georges", wellfield, ignore.case = TRUE) ~ "Bairs Georges",
+      TRUE ~ coalesce(as.character(wellfield), "Other")
+    ),
+    wellfield_group = factor(wellfield_group, levels = c(wellfield_order, "Other")),
+    .y_ord = do.call(dplyr::coalesce, c(as.list(select(., any_of(c("y.cent", "y_cent", "Y.cent")))), list(0)))
+  ) %>%
+  arrange(wellfield_group, desc(.y_ord), Parcel) %>%
+  select(-.y_ord, Parcel, wellfield_group, wellfield, Type, GB_TYPE, everything()) %>%
+  head(16)
+
+if (nrow(profile_parcels) == 0) {
+  cat("No wellfield parcels meet the chronic criterion (cover or grass below baseline for more than 5 years).")
+} else {
+  cat("Profiling **", nrow(profile_parcels), "** wellfield parcels chronic below baseline (cover or grass below baseline for more than 5 years).\n\n", sep = "")
+}
+
+last_year_if_nonneg <- function(year, delta) {
+  yr <- year[!is.na(delta) & delta >= 0]
+  if (length(yr) == 0) {
+    return(NA_real_)
+  }
+  max(yr, na.rm = TRUE)
+}
+
+last_year_from_counter <- function(counter) {
+  if (is.na(counter) || counter <= 0) {
+    return(NA_real_)
+  }
+  cYear - counter
+}
+
+build_parcel_notes <- function(parcel_id) {
+  current <- deltas_ttest_att %>%
+    filter(Parcel == parcel_id) %>%
+    slice(1)
+
+  if (nrow(current) == 0) {
+    return(c("No summary data available for this parcel."))
+  }
+
+  type_label <- current$GB_TYPE
+  wf_label <- current$Type
+  wf_name <- if (!is.null(current$wellfield) && !is.na(current$wellfield)) current$wellfield else "Unknown"
+
+  cover_delta <- round(current$Cover.Delta, 1)
+  grass_delta <- round(current$Grass.Delta, 1)
+  shrub_delta <- round(current$Shrub.Delta, 1)
+  pgrass_pct <- if (!is.na(current$pGrass)) round(current$pGrass * 100, 1) else NA_real_
+
+  ts_full <- parcels_deltas %>%
+    filter(Parcel == parcel_id) %>%
+    select(NominalYear, Cover, Grass, Shrub, Cover.Delta, Grass.Delta, Shrub.Delta)
+
+  first_year <- ts_full %>%
+    filter(!is.na(Cover) | !is.na(Grass) | !is.na(Shrub)) %>%
+    summarise(year = min(NominalYear, na.rm = TRUE), .groups = "drop") %>%
+    pull(year)
+
+  yoy_vals <- parcels_deltas %>%
+    filter(Parcel == parcel_id, NominalYear %in% c(cYear, cYear - 1)) %>%
+    arrange(NominalYear) %>%
+    summarise(
+      yoy_grass = diff(Grass),
+      yoy_cover = diff(Cover),
+      yoy_pgrass = diff(pGrass),
+      .groups = "drop"
+    )
+  yoy_grass <- if (nrow(yoy_vals) == 0 || all(is.na(yoy_vals))) NA_real_ else round(yoy_vals$yoy_grass[1], 1)
+  yoy_cover <- if (nrow(yoy_vals) == 0 || all(is.na(yoy_vals))) NA_real_ else round(yoy_vals$yoy_cover[1], 1)
+  yoy_pgrass <- if (nrow(yoy_vals) == 0 || all(is.na(yoy_vals))) NA_real_ else round(yoy_vals$yoy_pgrass[1], 2)
+
+  dtw_current <- dtw_pfix %>%
+    filter(Parcel == parcel_id, Year == cYear) %>%
+    summarise(DTW = mean(DTW, na.rm = TRUE), .groups = "drop") %>%
+    pull(DTW)
+
+  dtw_baseline <- dtw_pfix %>%
+    filter(Parcel == parcel_id, Year %in% 1984:1986) %>%
+    summarise(DTW = mean(DTW, na.rm = TRUE), .groups = "drop") %>%
+    pull(DTW)
+
+  cover_yrs <- dplyr::coalesce(current$Cover_sig.counter, 0)
+  grass_yrs <- dplyr::coalesce(current$Grass_sig.counter, 0)
+
+  last_cover <- last_year_from_counter(cover_yrs)
+  last_grass <- last_year_from_counter(grass_yrs)
+  last_shrub <- last_year_if_nonneg(ts_full$NominalYear, ts_full$Shrub.Delta)
+
+  below_types <- c(
+    if (cover_yrs > 0) "Cover" else NULL,
+    if (grass_yrs > 0) "Grass" else NULL,
+    if (!is.na(current$Shrub.Delta) && current$Shrub.Delta < 0) "Shrub" else NULL
+  )
+  below_text <- if (length(below_types) > 0) {
+    paste("Below baseline (current year):", paste(below_types, collapse = ", "))
+  } else {
+    "Below baseline (current year): none"
+  }
+
+  format_last <- function(label, last_year, counter) {
+    if (is.na(counter) || counter <= 0) {
+      return(NULL)
+    }
+    if (is.finite(first_year) && is.finite(last_year) && last_year < first_year) {
+      return(paste0(label, " baseline"))
+    }
+    paste0(label, " ", last_year)
+  }
+
+  last_text_parts <- c()
+  cover_last <- format_last("Cover", last_cover, cover_yrs)
+  grass_last <- format_last("Grass", last_grass, grass_yrs)
+  if (!is.null(cover_last)) last_text_parts <- c(last_text_parts, cover_last)
+  if (!is.null(grass_last)) last_text_parts <- c(last_text_parts, grass_last)
+  if (is.finite(last_shrub)) last_text_parts <- c(last_text_parts, paste0("Shrub ", last_shrub))
+  last_text <- if (length(last_text_parts) > 0) {
+    paste("Last at/above baseline:", paste(last_text_parts, collapse = "; "))
+  } else {
+    "Last at/above baseline: not available"
+  }
+
+  summary_text <- paste0(
+    "Type ", type_label, " parcel (", wf_label, "; ", wf_name, "). ",
+    "Cover Δ ", cover_delta, "%; Grass Δ ", grass_delta, "%; Shrub Δ ", shrub_delta, "%."
+  )
+
+  pshrub_pct <- if (!is.na(current$pShrub)) round(current$pShrub * 100, 1) else NA_real_
+  props_parts <- c()
+  if (is.finite(pgrass_pct)) props_parts <- c(props_parts, paste0("grass ", pgrass_pct, "%"))
+  if (is.finite(pshrub_pct)) props_parts <- c(props_parts, paste0("shrub ", pshrub_pct, "%"))
+  props_text <- if (length(props_parts) > 0) {
+    paste0("Current proportions: ", paste(props_parts, collapse = "; "), ".")
+  } else {
+    "Current proportions: not available."
+  }
+
+  cover_pct <- if (!is.na(current$Cover)) round(current$Cover, 1) else NA_real_
+  grass_pct <- if (!is.na(current$Grass)) round(current$Grass, 1) else NA_real_
+  shrub_pct <- if (!is.na(current$Shrub)) round(current$Shrub, 1) else NA_real_
+  cover_parts <- c()
+  if (is.finite(cover_pct)) cover_parts <- c(cover_parts, paste0("total ", cover_pct, "%"))
+  if (is.finite(grass_pct)) cover_parts <- c(cover_parts, paste0("grass ", grass_pct, "%"))
+  if (is.finite(shrub_pct)) cover_parts <- c(cover_parts, paste0("shrub ", shrub_pct, "%"))
+  cover_vals_text <- if (length(cover_parts) > 0) {
+    paste0("Current cover: ", paste(cover_parts, collapse = "; "), ".")
+  } else {
+    "Current cover: not available."
+  }
+
+  yoy_parts <- c()
+  if (is.finite(yoy_grass)) yoy_parts <- c(yoy_parts, paste0("grass ", yoy_grass, "%"))
+  if (is.finite(yoy_cover)) yoy_parts <- c(yoy_parts, paste0("cover ", yoy_cover, "%"))
+  if (is.finite(yoy_pgrass)) yoy_parts <- c(yoy_parts, paste0("pGrass ", if (yoy_pgrass >= 0) "+" else "", yoy_pgrass))
+  yoy_text <- if (length(yoy_parts) > 0) {
+    paste0("Year-over-year: ", paste(yoy_parts, collapse = "; "), ".")
+  } else {
+    "Year-over-year: not available."
+  }
+
+  dtw_text <- if (is.finite(dtw_current) && is.finite(dtw_baseline)) {
+    paste0("Current DTW (ft BGS): ", round(dtw_current, 1),
+           "; baseline avg (1984-86): ", round(dtw_baseline, 1), ".")
+  } else {
+    "Current DTW vs baseline: not available."
+  }
+
+  sig_text <- paste0(
+    "Significance counters (years below baseline): Cover ",
+    dplyr::coalesce(current$Cover_sig.counter, 0),
+    "; Grass ",
+    dplyr::coalesce(current$Grass_sig.counter, 0)
+  )
+
+  c(summary_text, below_text, last_text, props_text, cover_vals_text, yoy_text, dtw_text, sig_text)
+}
+
+for (i in seq_len(nrow(profile_parcels))) {
+  pid <- profile_parcels$Parcel[i]
+  wf_group <- profile_parcels$wellfield_group[i]
+  cat("\n\n### ", wf_group, " — Parcel ", pid, "\n\n", sep = "")
+
+  notes <- build_parcel_notes(pid)
+  cat("**Notes (standardized)**\n\n")
+  cat(paste0("- ", notes, collapse = "\n"), "\n\n")
+
+  ts_raw <- parcels_deltas %>%
+    filter(Parcel == pid) %>%
+    select(NominalYear, Cover, Grass, Shrub, pGrass, pShrub) %>%
+    arrange(NominalYear)
+
+  year_min <- 1985
+  year_max <- cYear
+
+  current_vals <- parcels_deltas %>%
+    filter(Parcel == pid, NominalYear == cYear) %>%
+    select(Cover, Grass, Shrub, pGrass, pShrub) %>%
+    slice(1)
+
+  if (nrow(current_vals) == 0) {
+    current_vals <- deltas_ttest_att %>%
+      filter(Parcel == pid) %>%
+      slice(1) %>%
+      select(Cover, Grass, Shrub, pGrass, pShrub)
+  }
+
+  ts <- ts_raw %>%
+    complete(NominalYear = year_min:year_max) %>%
+    mutate(
+      Cover = ifelse(is.na(Cover) & !is.na(Grass) & !is.na(Shrub), Grass + Shrub, Cover),
+      Grass = ifelse(is.na(Grass) & !is.na(Cover) & !is.na(pGrass), Cover * pGrass, Grass),
+      Shrub = ifelse(is.na(Shrub) & !is.na(Cover) & !is.na(pShrub), Cover * pShrub, Shrub),
+      Cover = ifelse(NominalYear == cYear & is.na(Cover), current_vals$Cover, Cover),
+      Grass = ifelse(NominalYear == cYear & is.na(Grass), current_vals$Grass, Grass),
+      Shrub = ifelse(NominalYear == cYear & is.na(Shrub), current_vals$Shrub, Shrub),
+      pGrass = ifelse(NominalYear == cYear & is.na(pGrass), current_vals$pGrass, pGrass),
+      pShrub = ifelse(NominalYear == cYear & is.na(pShrub), current_vals$pShrub, pShrub),
+      Cover = ifelse(
+        NominalYear == cYear & is.na(Cover) &
+          is.finite(Grass) & is.finite(pGrass) & pGrass > 0,
+        Grass / pGrass,
+        Cover
+      ),
+      Cover = ifelse(
+        NominalYear == cYear & is.na(Cover) &
+          is.finite(Shrub) & is.finite(pShrub) & pShrub > 0,
+        Shrub / pShrub,
+        Cover
+      )
+    )
+
+  year_breaks <- sort(unique(c(seq(year_min, year_max, by = 5), year_max)))
+  plot_margin <- margin(14, 24, 14, 14)
+  x_limits <- c(year_min - 0.5, year_max + 0.5)
+
+  ts_stack <- ts %>%
+    select(NominalYear, Grass, Shrub) %>%
+    pivot_longer(cols = c(Grass, Shrub), names_to = "metric", values_to = "value") %>%
+    mutate(metric = factor(metric, levels = c("Grass", "Shrub"))) %>%
+    arrange(metric)
+
+  baseline_total <- ts %>%
+    filter(NominalYear == 1986) %>%
+    transmute(total = Grass + Shrub) %>%
+    slice(1) %>%
+    pull(total)
+
+  baseline_grass <- ts %>%
+    filter(NominalYear == 1986) %>%
+    transmute(grass = Grass) %>%
+    slice(1) %>%
+    pull(grass)
+
+  label_offset <- max(ts$Grass + ts$Shrub, na.rm = TRUE) * 0.03
+  if (!is.finite(label_offset) || label_offset == 0) {
+    label_offset <- 1
+  }
+
+  p_stack <- ggplot(ts_stack, aes(x = NominalYear, y = value, fill = metric)) +
+    geom_col(position = "stack", width = 0.8, na.rm = TRUE) +
+    scale_fill_manual(values = c(Grass = "#66a61e", Shrub = "#7570b3")) +
+    labs(x = NULL, y = "Cover (%)", fill = "Metric") +
+    scale_y_continuous(expand = expansion(mult = c(0.02, 0.26))) +
+    scale_x_continuous(breaks = year_breaks, expand = expansion(mult = c(0, 0))) +
+    coord_cartesian(xlim = x_limits, clip = "off") +
+    theme_minimal(base_size = 11) +
+    theme(
+      plot.margin = plot_margin,
+      plot.spacing = unit(0.3, "lines"),
+      axis.title.y = element_text(margin = margin(r = 10))
+    )
+
+  if (!is.na(baseline_total)) {
+    p_stack <- p_stack +
+      geom_hline(yintercept = baseline_total, linetype = "dashed", color = "black")
+  }
+
+  if (!is.na(baseline_grass)) {
+    p_stack <- p_stack +
+      geom_hline(yintercept = baseline_grass, linetype = "dashed", color = "#66a61e")
+  }
+
+  if (is.finite(baseline_total) && is.finite(baseline_grass) &&
+      abs(baseline_total - baseline_grass) < 0.01) {
+    p_stack <- p_stack +
+      annotate("text", x = min(ts$NominalYear, na.rm = TRUE), y = baseline_grass + label_offset,
+               label = "Grass baseline", hjust = 0, vjust = 0, size = 3, color = "#66a61e")
+  } else {
+    if (!is.na(baseline_total)) {
+      p_stack <- p_stack +
+        annotate("text", x = min(ts$NominalYear, na.rm = TRUE), y = baseline_total + label_offset,
+                 label = "Baseline (1986)", hjust = 0, vjust = 0, size = 3)
+    }
+    if (!is.na(baseline_grass)) {
+      p_stack <- p_stack +
+        annotate("text", x = min(ts$NominalYear, na.rm = TRUE), y = baseline_grass + label_offset,
+                 label = "Grass baseline", hjust = 0, vjust = 0, size = 3, color = "#66a61e")
+    }
+  }
+
+  baseline_pgrass <- ts %>%
+    filter(NominalYear == 1986) %>%
+    transmute(pGrass = pGrass) %>%
+    slice(1) %>%
+    pull(pGrass)
+
+  pgrass_offset <- (max(ts$pGrass, na.rm = TRUE) - min(ts$pGrass, na.rm = TRUE)) * 0.12
+  if (!is.finite(pgrass_offset) || pgrass_offset == 0) {
+    pgrass_offset <- 0.05
+  }
+
+  p_prop <- ggplot(ts, aes(x = NominalYear, y = pGrass)) +
+    geom_line(linewidth = 0.7, color = "#1b9e77", na.rm = TRUE) +
+    geom_point(size = 1.6, color = "#1b9e77", na.rm = TRUE) +
+    labs(x = NULL, y = "pGrass") +
+    scale_x_continuous(breaks = year_breaks, expand = expansion(mult = c(0, 0))) +
+    scale_y_continuous(expand = expansion(mult = c(0.05, 0.28))) +
+    coord_cartesian(xlim = x_limits, clip = "off") +
+    theme_minimal(base_size = 11) +
+    theme(
+      plot.margin = plot_margin,
+      plot.spacing = unit(0.3, "lines"),
+      axis.title.y = element_text(margin = margin(r = 10))
+    )
+
+  if (!is.na(baseline_pgrass)) {
+    p_prop <- p_prop +
+      geom_hline(yintercept = baseline_pgrass, linetype = "dashed", color = "#1b9e77") +
+      annotate("text", x = min(ts$NominalYear, na.rm = TRUE), y = baseline_pgrass + pgrass_offset,
+               label = "Baseline (1986)", hjust = 0, vjust = 0, size = 3, color = "#1b9e77")
+  }
+
+  p_stack_prop <- p_stack / p_prop + plot_layout(heights = c(1, 1))
+
+  dtw_ts <- dtw_pfix %>%
+    filter(Parcel == pid, Year >= year_min, Year <= year_max) %>%
+    select(Year, DTW)
+
+  p_dtw <- NULL
+  if (nrow(dtw_ts) > 0 && any(!is.na(dtw_ts$DTW))) {
+    dtw_stats <- dtw_ts %>%
+      group_by(Year) %>%
+      summarise(DTW = mean(DTW, na.rm = TRUE), .groups = "drop") %>%
+      complete(Year = year_min:year_max)
+
+    baseline_avg <- mean(dtw_stats$DTW[dtw_stats$Year %in% 1984:1986], na.rm = TRUE)
+
+    p_dtw <- ggplot(dtw_stats, aes(x = Year, y = DTW)) +
+      geom_line(color = "#2c3e50", linewidth = 0.8, na.rm = TRUE) +
+      geom_point(color = "#2c3e50", size = 2.2, na.rm = TRUE) +
+      geom_hline(yintercept = baseline_avg, linetype = "dashed", color = "#2c3e50") +
+      annotate("text", x = year_min, y = baseline_avg, label = "Avg. 1984-86 DTW",
+               hjust = 0, vjust = -0.5, size = 3, color = "#2c3e50") +
+      scale_x_continuous(breaks = year_breaks, expand = expansion(mult = c(0, 0))) +
+      coord_cartesian(xlim = x_limits) +
+      scale_y_reverse() +
+      labs(x = "Year", y = "DTW (ft BGS)") +
+      theme_minimal(base_size = 11) +
+      theme(
+        plot.margin = plot_margin,
+        plot.spacing = unit(0.3, "lines"),
+        axis.title.y = element_text(margin = margin(r = 10))
+      )
+  }
+
+  if (!is.null(p_dtw)) {
+    p_combined <- p_stack / p_prop / p_dtw +
+      plot_layout(heights = c(1, 1, 1), guides = "collect") &
+      theme(legend.position = "bottom")
+  } else {
+    p_combined <- p_stack / p_prop +
+      plot_layout(heights = c(1, 1), guides = "collect") &
+      theme(legend.position = "bottom")
+  }
+
+  cat("\n\n::: {.parcel-profile-figure}\n\n")
+  print(p_combined)
+  cat("\n:::\n\n")
+
+  if (is.null(p_dtw)) {
+    cat("**DTW data not available for this parcel.**\n\n")
+  }
+}
+```
+
+## Interpretation Notes
+
+These profiles summarize observed changes for all monitored parcels (QA/QC). Potential drivers of proportional grass change include pumping‑related drawdown, climate variability, land use, or site‑specific conditions. Attribution requires integrating parcel trends with soil‑moisture and pumping management records.

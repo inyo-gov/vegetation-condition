@@ -1,3 +1,96 @@
+# Maps view interactive----
+#' Title
+#'
+#' @param cYear
+#' @param parcels_shp_ttest
+#' @param wf
+#' @param or
+#' @param streams
+#' @param canals
+#' @param laa
+#' @param lakes
+#' @param monit.sites
+#'
+#' @return
+#' @export
+#'
+#' @examples
+panel_map_view<- function(cYear,parcels_shp_ttest, or,streams,canals,laa,lakes, monit.sites){
+  # wf,
+  # write function to handle custom plot with input as string e.g. 'Laws'
+  limit <- parcels_shp_ttest
+  # %>% filter(grepl(wf,wellfield))
+
+  tpc.below <- limit %>% filter(Cover_significance == 'significant')
+
+  pgr.below <- limit %>% filter(Grass_significance == 'significant')
+
+
+  tmap_mode("view")
+
+
+  tm_shape(limit,
+           group = 'Wellfield - Parcels') +
+    tm_polygons(col =c("Grass"),
+                breaks = c(0,5,10,15,20,25,30,35,40,50,60,Inf),
+                palette = "Greens",
+                title.col = "PCL_merged",
+                id = "PCL_merged",
+                popup.vars = c("GB_TYPE","Ecologic_3","COMM_NAME","Grass.Delta","Cover.Delta", "NDVI.delta","NDVI.Baseline","Type"),
+                group = "Wellfield - Parcels")+
+
+    tm_shape(pgr.below,
+             group = 'Wellfield - Parcels') +
+    tm_borders(col = 'red',lwd = 2)+
+    tm_text("PCL", size = .5,  col = "white",shadow=TRUE,remove.overlap=FALSE, group = 'Labels', auto.placement = .2, bg.color = 'darkgreen')
+
+  tm_shape(limit, group = 'Wellfield - Parcels') +
+    tm_polygons(col =c("Grass.Delta"), breaks = c(-40,-30,-20,-10,-5,5,10,20,30,40,Inf),palette = "RdYlGn",title.col = "PCL_merged",  id = "PCL_merged",popup.vars = c("GB_TYPE","Ecologic_3","COMM_NAME","Grass.Delta","Cover.Delta", "NDVI.delta","NDVI.Baseline","Type"), group = "Wellfield - Parcels")+
+
+    tm_shape(pgr.below, group = 'Wellfield - Parcels') +
+    tm_borders(col = 'red',lwd = 1)+
+
+    # cover delta
+    tm_shape(limit, group = 'Wellfield - Parcels') +
+    tm_polygons(col =c("Cover"), breaks = c(0,5,10,15,20,25,30,35,40,50,60,Inf),palette = "Greens",title.col = "PCL_merged",  id = "PCL_merged",popup.vars = c("GB_TYPE","Ecologic_3","COMM_NAME","Grass.Delta","Cover.Delta", "NDVI.delta","NDVI.Baseline","Type"), group = "Wellfield - Parcels")+
+
+    tm_shape(tpc.below, group = 'Wellfield - Parcels') +
+    tm_borders(col = 'red',lwd = 2)+
+    tm_text("PCL",  size = .5,col = "white",shadow=TRUE,remove.overlap=FALSE, group = 'Labels', auto.placement = .2, bg.color = 'darkgreen')
+
+  tm_shape(limit, group = 'Wellfield - Parcels') +
+    tm_polygons(col =c("Cover.Delta"), breaks = c(-40,-30,-20,-10,-5,5,10,20,30,40,Inf),palette = "RdYlGn",title.col = "PCL_merged",  id = "PCL_merged",popup.vars = c("GB_TYPE","Ecologic_3","COMM_NAME","Grass.Delta","Cover.Delta", "NDVI.delta","NDVI.Baseline","Type"), group = "Wellfield - Parcels")+
+
+    tm_shape(tpc.below, group = 'Wellfield - Parcels') +
+    tm_borders(col = 'red')+
+
+    # on/off sites
+    tm_shape(monit.sites, group = 'On/Off Monitoring Sites') +
+    tm_text("SITE",  col = "white", size=.5,remove.overlap=TRUE,shadow=TRUE,group = 'Labels',auto.placement = .1,bg.color = 'blue') +
+    tm_symbols(col = "blue", scale = .05, title.col = "SITE",  id = "SITE",popup.vars = c("SITE","TYPE"),group = 'On/Off Monitoring Sites')+
+
+    # background reference layers
+    tm_shape(canals, group = 'Canals') +
+    tm_lines(col = "blue", scale = .6, group = 'Canals')+
+
+    tm_shape(streams, group = 'Streams') +
+    tm_lines(col = "blue", scale = 1, group = 'Streams')+
+
+    tm_shape(or, group = 'River') +
+    tm_lines(col = "blue", scale = 1, group = 'River')+
+
+    tm_shape(laa, group = 'LAA') +
+    tm_lines(col = "blue", scale = 1, group = 'LAA')+
+
+    tm_shape(lakes, group = 'Lakes') +
+    tm_polygons(col = "blue", scale = 1, group = 'Lakes')
+
+
+  return(map)
+
+
+}
+
 #' Count Wellfield and Control Parcels
 #'
 #' This function counts the number of distinct parcels for each type (e.g., wellfield, control).

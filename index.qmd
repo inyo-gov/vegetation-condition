@@ -1,28 +1,16 @@
 ---
-title: "Owens Valley Vegetation Condition"
-description: "This report follows Green Book Section I.C.1.a, Determining Measurability, and Box I.C.1.a.ii, Transects for Monitoring Vegetation Response to Pumping. Automated statistical procedures generate a list of parcels showing deviations from baseline conditions, which are then further evaluated under Green Book Section I.C.1.b, Determining Attributability, to identify the causes of these apparent changes."
-format: 
-  html: 
+title: "BOX I.C.1.a.ii Transects for Monitoring Vegetation Response to Pumping"
+subtitle: "Automated Data Processing and Statistical Report"
+author: "Inyo County Water Department"
+date: "2025-01-09"
+output:
+  html_document:
     toc: true
-    toc-depth: 3
-    anchor-sections: true
-    smooth-scroll: true
-    html-math-method: katex
-date-modified: "2024-09-12"
-affiliation: "Inyo County Water Department"
-affiliation-url: inyowater.org
-categories: [Green Book - Box I.C.1.a.ii, ICWD Annual Report, 2024-2025, vegetation condition]
-citation:
-  type: report
-  container-title: "Annual Report"
-  publisher: "Inyo County Water Department"
-  issued: "2024-09-12"
-  available-date: "2024-09-12"
-  url: https://inyo-gov.github.io/vegetation-condition/
-google-scholar: true
+    toc_depth: 3
+    number_sections: true
 ---
 
-```{r setup, include=FALSE, message = FALSE, warning = FALSE}
+```{r setup, include=FALSE, warning=FALSE, message=FALSE}
 library(targets)
 library(tidyverse)
 library(rmarkdown)
@@ -40,17 +28,22 @@ library(here)
 library(ggstatsplot)
 library(janitor)
 library(readxl)
+library(patchwork)
 
-knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+# Global chunk options
+knitr::opts_chunk$set(echo=FALSE, warning=FALSE, message=FALSE)
 options(tidyverse.quiet = TRUE)
 ```
 
-```{r tar-load-initial}
-
-
+```{r load-data}
+# Example: Load data from your targets or other scripts
+# (Adjust to your needs; remove if not required)
 source(here("code","R","targets_functions.R"))
 source(here("code","R","report_functions.R"))
 
+# Load relevant target objects
+# Todo: provide option to load data from motherduck public view or duckdb
+# would preclude need to access _targets folder locally and move to hosted duckdb.
 targets <- c(
   "species",
   "n_parcels_sampled",
@@ -62,6 +55,8 @@ targets <- c(
   "icwd_ladwp_bind",
   "lpt_updated_master",
   "transects",
+  "dtw_pfix",
+  "rs_pfix",
   "parcels_shp",
   "parcels_deltas",
   "parcels_shp_ttest",
@@ -99,391 +94,417 @@ targets <- c(
 )
 
 withr::with_dir(rprojroot::find_root('_targets.R'), tar_load(targets))
+```
 
-a <- attributes_pfix %>% select(Parcel,Type,wellfield,wellfield_area, GB_TYPE, Holland)
+## Introduction
+
+Vegetation in Owens Valley is monitored annually to quantify change in groundwater‑dependent plant communities and evaluate potential responses to pumping. This report implements **Green Book Section I.C.1.a**, using line‑point transect data to compare current conditions to the **1984–1987** baseline, contrast **Control** and **Wellfield** parcels, and apply standardized statistical tests for measurable change in cover and composition.\
+Reference: [Green Book Section I.C.1.a](https://www.inyowater.org/wp-content/uploads/2017/09/GBMemo_SCfeb2017.pdf). Pumping management context: [Soil‑Plant Water Balance and Groundwater](https://inyo-gov.github.io/pumping-management/).
+
+## Methods
+
+Field methods are documented in Green Book Box I.C.1.a.ii (see reference link above). In summary, joint ICWD/LADWP line‑point transects are re‑measured annually at georeferenced locations to compare live cover and species composition to the 1984–1987 baseline and to detect measurable change over time. Methods follow the standing committee update (Feb 22, 2017) and include a consistent field protocol with annual calibration and shared data review.
+
+### Data Processing (ETL)
+
+The annual line‑point transect data are extracted from ICWD Google Sheets and LADWP CSVs, standardized, and compiled into a single analysis‑ready dataset. The core steps are:
+
+1.  **Extract** raw parcel sheets (or cached snapshots) and LADWP cover files.\
+2.  **Transform** to long format, harmonize species codes, and attach functional traits.\
+3.  **Validate** transect coverage, remove duplicates, and track entity provenance.\
+4.  **Merge** ICWD and LADWP datasets and append to the master dataset.\
+5.  **Export** long and wide deliverables for QA/QC, reporting, and archiving.
+
+In **`r cYear`**, the Inyo County Water Department (ICWD) and the Los Angeles Department of Water & Power (LADWP) jointly monitored **`r n_parcels_sampled`** vegetation parcels using **`r n_transects_sampled`** line-point intercept transects. Statistical tests compared current-year vegetation cover to the **1984-1987** baseline for **Wellfield** parcels (pumping-affected) and **Control** parcels (no pumping).
+
+We compare parcel-level cover in the 1984-1987 baseline (Nominal Year 1986) to the current year (`r sprintf("<span style='color:#006d2c;font-size:1.05em;'>%s</span>", cYear)`) for **Wellfield** and **Control** parcels using the paired subset shown below. Results summarize differences in total cover, grass, and shrub cover between baseline and current-year conditions; statistical significance is shown on the plot for each cover type (ns = not significant; \* indicates p \< 0.05).
+
+### Figure 1: Interactive Map (parcels sampled this past year)
+
+Parcels sampled in **`r cYear`** are colored by **proportional grass change** (`pGrass_delta` = current year `pGrass` minus baseline `pGrass`). Red outlines indicate `Cover_sig.counter > 5` or `Grass_sig.counter > 5`. Zoom and pan to explore; click a parcel for details.
+
+```{r}
+#| label: fig-gbtype-interactive-map
+#| fig-cap: "Interactive map: parcels sampled this past year, colored by grass proportion change (current vs baseline). Red outlines indicate Cover_sig.counter > 5 or Grass_sig.counter > 5."
+#| fig-width: 4.5
+#| fig-height: 5
+#| column: page
+
+tmap_mode("view")
+
+# Compute proportional grass change (current year vs baseline)
+pgrass_baseline <- parcels %>%
+  filter(NominalYear == 1986) %>%
+  select(Parcel, pGrass_baseline = pGrass)
+
+pgrass_current <- parcels %>%
+  filter(NominalYear == cYear) %>%
+  select(Parcel, pGrass_current = pGrass)
+
+pgrass_delta <- pgrass_current %>%
+  left_join(pgrass_baseline, by = "Parcel") %>%
+  mutate(pGrass_delta = pGrass_current - pGrass_baseline)
+
+map_data <- parcels_shp_ttest %>%
+  filter(!is.na(geometry)) %>%
+  left_join(pgrass_delta, by = c("PCL_merged" = "Parcel")) %>%
+  mutate(GB_TYPE.x = dplyr::coalesce(GB_TYPE.x, "Unknown")) %>%
+  sf::st_transform(4326)
+
+map_bbox <- sf::st_bbox(map_data)
+map_center <- c(
+  (map_bbox["xmin"] + map_bbox["xmax"]) / 2,
+  (map_bbox["ymin"] + map_bbox["ymax"]) / 2
+)
+
+# Parcels with cover or grass below baseline 5+ years (red outline)
+map_sig <- map_data %>%
+  filter(
+    dplyr::coalesce(Cover_sig.counter, 0) > 5 |
+      dplyr::coalesce(Grass_sig.counter, 0) > 5
+  )
+
+# Interactive map: parcels only (all other layers commented out to keep widget small)
+map_obj <- tm_basemap("Esri.WorldTopoMap") +
+  tm_shape(map_data) +
+  tm_polygons(
+    col = "pGrass_delta",
+    breaks = c(-1, -0.5, -0.25, -0.1, -0.05, 0.05, 0.1, 0.25, 0.5, 1),
+    palette = "RdYlGn",
+    title = "Grass proportion Δ",
+    colorNA = "lightgray",
+    textNA = "Missing",
+    alpha = 0.7,
+    border.col = "gray40",
+    lwd = 1,
+    id = "PCL_merged",
+    popup.vars = c(
+      "GB_TYPE.x", "COMM_NAME", "Grass.Delta", "Shrub.Delta", "Cover.Delta",
+      "pGrass_baseline", "pGrass_current", "pGrass_delta",
+      "Cover", "Grass", "Shrub",
+      "Cover_sig.counter", "Grass_sig.counter", "Type"
+    )
+  )
+if (nrow(map_sig) > 0) {
+  map_obj <- map_obj +
+    tm_shape(map_sig) +
+    tm_borders(col = "red", lwd = 2)
+}
+map_obj <- map_obj +
+  tm_view(set.view = c(map_center[1], map_center[2], 11))
+
+# All other layers commented out (canals, streams, monsites, river, laa, lakes)
+# to keep the Leaflet widget smaller so pandoc can finish:
+# tm_shape(canals_shp) + tm_lines(...)
+# tm_shape(streams_shp) + tm_lines(...) + tm_text("NAME", ...)
+# tm_shape(monsites_shp) + tm_symbols(...) + tm_text("SITE", ...)
+# tm_shape(or_shp) + tm_lines(...) + tm_text("NAME", ...)
+# tm_shape(laa_shp) + tm_lines(...)
+# tm_shape(lakes_shp) + tm_polygons(...)
+
+map_obj
 
 ```
 
-# Introduction
+## Results
 
-The purpose of this report is to provide the Inyo-LA Technical Group with a summary of the annual monitoring program as described in [Green Book Box I.C.1.a.ii](https://www.inyowater.org/wp-content/uploads/2017/09/GBMemo_SCfeb2017.pdf), *Transects for Monitoring Vegetation Response to Pumping*. This report specifically flags groundwater-dependent vegetation parcels in wellfield areas that show measurably different vegetation characteristics in the current year compared to the 1984-87 vegetation baseline. The list is further refined to include parcels that have been below baseline for five or more years. 
+-   **Statistically below baseline**:
+    -   `r sprintf("<span style='color:#006d2c;font-size:1.05em;'>%s</span>", sum((deltas_ttest_att$Type == "W") & ((deltas_ttest_att$Cover.Delta < 0) | (deltas_ttest_att$Grass.Delta < 0)), na.rm = TRUE))` wellfield parcels are below baseline this year (cover and/or perennial grass). Of these, `r sprintf("<span style='color:#006d2c;font-size:1.05em;'>%s</span>", sum((deltas_ttest_att[["Cover_sig.counter"]] > 5 | deltas_ttest_att[["Grass_sig.counter"]] > 5) & deltas_ttest_att$Type == "W", na.rm = TRUE))` have been below baseline for **5+** consecutive years. Filter **Cover_Yrs** or **Grass_Yrs** \> 0 in the table below to view below-baseline parcels in cover or perennial grass.
 
-Because this automated report relies solely on field data from the line point monitoring program, the summary statistics can be reviewed in late summer/fall as soon as the field data is digitally entered. The statistical methods described in Green Book Box I.C.1.a.ii have been implemented in a transparent and reproducible data pipeline using the R computing language.
+## Parcel Summary (Combined)
 
-## Background
+Table 1 summarizes current‑year parcel status for **Wellfield** parcels. Columns show baseline deltas (`Cover_D`, `Grass_D`, `Shrub_D`), years below baseline (`Cover_Yrs`, `Grass_Yrs`), chronic flag, cover types below baseline, and the last year at/above baseline (`Last_Base`, derived from the significance counters). Proportions (`pGrass`, `pShrub`) and current cover values (`Cover`, `Grass`, `Shrub`) are included for context, along with 2025 depth to water (`DTW`) and its percentile within the parcel’s DTW time series (`DTW_pct`, higher = shallower water).
 
-Pertinent sections in Green Book I.C.1 *Determination of Significant Impacts* is included below for background.
+### Table 1: Parcel Summary (Combined)
 
-### Green Book Section I.C *Impact Determination and Mitigation*
+```{r tbl-parcel-summary-combined}
+#| column: screen
+last_year_if_nonneg <- function(year, delta) {
+  yr <- year[!is.na(delta) & delta >= 0]
+  if (length(yr) == 0) {
+    return(NA_real_)
+  }
+  max(yr, na.rm = TRUE)
+}
 
-> "Among the primary goals of the Agreement are to manage groundwater pumping and surface water management practices as follows: 1) to avoid causing significant decreases in live vegetation cover; 2) to avoid changing a significant amount of vegetation from one classification to a lower (alphabetically) classification; 3) to avoid causing other significant effects on the environment; and 4) in a manner consistent with State and Federal laws pertaining to rare and endangered species. If any of these goals are not achieved, feasible mitigation of the affected area will be implemented. However, mitigation is not considered a primary management tool, but rather a secondary tool that will be employed should impacts occur that are inconsistent with the goals of the Agreement."
+current_year_deltas <- deltas_ttest_att %>%
+  filter(Type == "W") %>%
+  mutate(
+    below_cover = dplyr::coalesce(Cover_sig.counter, 0) > 0,
+    below_grass = dplyr::coalesce(Grass_sig.counter, 0) > 0,
+    below_shrub = Shrub.Delta < 0,
+    below_types = pmap_chr(
+      list(below_cover, below_grass, below_shrub),
+      ~ paste(
+        c(
+          if (isTRUE(..1)) "Cover" else NULL,
+          if (isTRUE(..2)) "Grass" else NULL,
+          if (isTRUE(..3)) "Shrub" else NULL
+        ),
+        collapse = "/"
+      )
+    )
+  )
 
-> "This section outlines a procedure for determining whether decreases and/or changes in vegetation or other significant effects on the environment have occurred or are occurring in a given management area. It describes the process the Technical Group will follow to ascertain whether a change is significant, and thus, whether it requires mitigation. It also describes how the Technical Group will develop and implement a mitigation plan and monitoring and reporting program."
+last_year_from_counter <- function(counter, first_reinv_year) {
+  if (is.na(counter)) return(NA_real_)
+  inferred <- cYear - counter
+  if (is.finite(first_reinv_year) && inferred < first_reinv_year) {
+    return(1986)
+  }
+  inferred
+}
 
-### Green Book Section I.C.1 *Determination of Significant Impacts*
+first_reinv_years <- parcels_deltas %>%
+  filter(NominalYear > 1986) %>%
+  group_by(Parcel) %>%
+  summarise(first_reinv_year = min(NominalYear, na.rm = TRUE), .groups = "drop")
 
-> "A significant decrease or change or other significant effect on the environment will be mitigated if it is measurable, attributable to groundwater pumping or surface water management practices, and significant. The Agreement provides that the determination of significance of an impact, and thus, whether it must be mitigated, will be made on a case by case basis. The steps in the case by case analysis are described below."
+parcel_summary <- current_year_deltas %>%
+  left_join(first_reinv_years, by = "Parcel") %>%
+  mutate(
+    last_cover_year = mapply(last_year_from_counter, Cover_sig.counter, first_reinv_year),
+    last_grass_year = mapply(last_year_from_counter, Grass_sig.counter, first_reinv_year),
+    last_at_baseline = pmap_chr(
+      list(below_types, last_cover_year, last_grass_year),
+      function(types, lc, lg) {
+        parts <- c()
+        if (str_detect(types, "Cover") && is.finite(lc)) {
+          parts <- c(parts, if (lc == 1986) "Cover baseline" else paste0("Cover ", lc))
+        }
+        if (str_detect(types, "Grass") && is.finite(lg)) {
+          parts <- c(parts, if (lg == 1986) "Grass baseline" else paste0("Grass ", lg))
+        }
+        if (length(parts) == 0) NA_character_ else paste(parts, collapse = " / ")
+      }
+    ),
+    chronic = ifelse(
+      dplyr::coalesce(Cover_sig.counter, 0) > 5 |
+        dplyr::coalesce(Grass_sig.counter, 0) > 5,
+      "Yes",
+      "No"
+    )
+  ) %>%
+  left_join(
+    {
+      dtw_by_parcel_year <- dtw_pfix %>%
+        group_by(Parcel, Year) %>%
+        summarise(DTW = mean(DTW, na.rm = TRUE), .groups = "drop")
 
-### Green Book Section I.C.1.a *Determining Measurability*
+      dtw_by_parcel_year %>%
+        group_by(Parcel) %>%
+        mutate(
+          rank = rank(DTW, ties.method = "min"),
+          n = n(),
+          DTW_pct = ifelse(n > 1, 100 * (1 - (rank - 1) / (n - 1)), NA_real_)
+        ) %>%
+        ungroup() %>%
+        filter(Year == cYear) %>%
+        select(Parcel, DTW, DTW_pct)
+    },
+    by = "Parcel"
+  ) %>%
+  select(
+    Parcel,
+    WF = wellfield,
+    Type,
+    GB = GB_TYPE,
+    Cover_D = Cover.Delta,
+    Grass_D = Grass.Delta,
+    Shrub_D = Shrub.Delta,
+    Cover_Yrs = Cover_sig.counter,
+    Grass_Yrs = Grass_sig.counter,
+    Chronic = chronic,
+    Below = below_types,
+    Last_Base = last_at_baseline,
+    DTW,
+    DTW_pct,
+    pGrass,
+    pShrub,
+    Cover,
+    Grass,
+    Shrub
+  ) %>%
+  arrange(desc(Chronic), Parcel)
 
-> In determining whether a change in vegetation cover or composition is measurable, the Technical Group will consider all relevant factors, including:
-
--   comparison of current vegetation cover and composition in the affected area with similar data taken during other time periods, including the 1984-87 vegetation inventory data;
-
--   Comparison of vegetation cover and composition at the affected area with vegetation data from one or more control sites located in areas which have similar vegetation, soil, and precipitation conditions;
-
--   comparison of the ratio of recently deceased vegetation to live vegetation in the affected area with other areas not affected by pumping and with similar vegetation cover and composition, soil, and precipitation conditions;
-
--   use of air photo and remote sensing techniques to assist in making comparisons of conditions during different time periods and in mapping the affected area;
-
--   comparison of data from randomly selected transects with similar data taken during other time periods, including the 1984-87 vegetation inventory data. This method will be employed in areas where monitoring site data does not exist, or where data covers an insufficient time period. Such transects will be performed as described in Box I.C.1.a.ii.[^2]
-
-[^2]: In reference to these 'relevant factors' listed above, Section I.C.1 explains: "A determination of measurability will be made if *any* of the relevant factors considered indicate even a *small* documentable change in vegetation cover or composition has occurred."
-
-# Methods
-
-## Baseline
-
-Between September 1984 and November 1987, LADWP conducted an inventory and mapping of vegetation on LA-owned lands in Owens Valley, resulting in 2,126 polygons of similar vegetation types, covering 223,168 acres. The Green Book vegetation monitoring program focuses on a subset of these groundwater-dependent parcels (classified as types B, C, D, and some E) that are influenced by groundwater pumping. This pumping affects the unconfined shallow aquifer, causing the water table and its capillary fringe to decline below the reach of obligate groundwater-dependent species within Owens Valley.
-
-## Monitoring Sample Size
-
-Parcels were initially selected based on one or more of the following criteria:
-1. The parcel contained a permanent monitoring site where soil/vegetation water balance is calculated.
-2. Baseline data was collected for the parcel.
-3. The parcel was in close proximity to a pumping well.
-4. Information on past and current land use for the parcel was available.[^3] 
-
-[^3]: The number of parcels sampled has varied over the years in response to staffing availability, ranging from 30 to 159, with a total of 192 parcels sampled at least once after the baseline period.
-
-Most parcels were sampled using the line-point-intercept method between 1984 and 1987. Some parcels were not directly sampled but were assigned cover and composition values from similar vegetation conditions. Welch's t-test for unequal variance was used to evaluate in which parcels and in which years total perennial cover and perennial grass cover significantly differed from baseline. This method, which uses the sample standard deviation to construct a 95% confidence interval, is applicable to parcels with more than one transect or nonzero sample variance in the baseline data. For unmeasured parcels during the baseline period that inherited a single baseline value from nearby parcels, a one-sample t-test was used to determine significance from the baseline. For parcels with low baseline sample sizes, procedures outlined in Green Book Box I.C.1.a.ii were followed[^4].
-
-[^4]: Green Book Box I.C.1.a.ii: "For parcels with small baseline inventory sample sizes (e.g., 1-4 transects), a one-sample t-test may be performed using the baseline inventory sample mean as the null hypothesis for the test".
-
-## Data
-
-### Field Data (line-point-intercept)
-
-In `r cYear`, `r n_parcels_sampled` were sampled by ICWD and LADWP.
-
-This report focuses on perennial species cover, as annual species are not dependent on groundwater. Perennial cover is further categorized into grass, non-graminoid herbaceous (herb), and shrub. To analyze changes in the composition of total perennial cover, we calculated the proportion of shrub, herb, and grass cover as fractions of the total perennial cover. Transect data are summarized for each parcel and year using the arithmetic average, creating a historical record of cover over time for each parcel.
-
-## Wellfield Control Group Comparison
-
-```{r}
-#| label: fun-n-wc
-#| echo: false
-
-count_wellfield <- count_wellfield_control_parcels(deltas_ttest_att) %>% gt()
+DT::datatable(
+  parcel_summary,
+  filter = "top",
+  options = list(
+    dom = "Blfrtip",
+    buttons = c("copy", "csv", "excel", "pdf", "print"),
+    scrollX = TRUE,
+    scrollCollapse = TRUE,
+    autoWidth = FALSE,
+    pageLength = 10
+  ),
+  width = "100%",
+  class = "compact stripe nowrap"
+) %>%
+  DT::formatRound(
+    columns = c("Cover_D", "Grass_D", "Shrub_D", "DTW", "DTW_pct", "pGrass", "pShrub", "Cover", "Grass", "Shrub"),
+    digits = 1
+  )
 ```
 
-In the early 1990s, parcels in Owens Valley were classified to assess the impact of pumping on vegetation. Parcels were designated as either part of a wellfield group, potentially affected by pumping, or a control group, where the impact on water table drawdown was determined to be negligible[^5]. In the 2000s, a rarefied subset of these parcels, sampled every year since 1992, was selected and has continued to be sampled annually up to `r cYear`. This subset includes 13 control parcels and 31 wellfield parcels. For these rarefied parcels, averages are plotted below to compare the groups over time, with linear trends reported separately for total cover, perennial herbaceous cover, and woody shrub cover. In `r cYear`, `r extract_cells(count_wellfield, columns = n, row = 1)` control parcels and `r extract_cells(count_wellfield, columns = n, row = 2)` wellfield parcels were sampled.
+## Wellfield vs. Control Group Comparison
 
-[^5]: **Control and Wellfield Designation:** Parcels were classified as belonging to either a wellfield or control group based on criteria derived from groundwater drawdown during the period of maximum pumping rate (1987-1993). Parcels were assigned to the wellfield group if (1) kriged depth-to-water (DTW) estimates exceeded 1-meter water-table drawdown during this period, or (2) they were located at sites corresponding to modeled drawdown contours greater than 10 feet. Parcels were assigned to the control group if (1) kriged DTW estimates were less than 1 meter, and (2) they were located at sites corresponding to modeled drawdown contours less than 10 feet. If kriged DTW estimates were unreliable due to an inadequate test-well network near the vegetation parcel, the groundwater-flow model estimate of the 10-foot drawdown contour was used as the sole criterion. An exception was applied to parcels associated with drawdown contours greater than 10 feet but located near a surface water source (e.g., canal, sewer pond, creek, river, or groundwater seepage source), which would lessen local drawdown effects—these parcels were classified as control. Some parcels currently in the wellfield group have higher water tables than during the 1987-1993 period but remain in the wellfield group due to their proximity to pumping wells and potential for pumping-induced drawdown. Each parcel is also classified by its Green Book management type, Holland plant community type, and its status as either wellfield or control.
-
-# Results {#sec-results}
-
-In the `r cYear` growing season, ICWD and LADWP collectively measured `r n_transects_sampled` line-point intercept transects over `r n_parcels_sampled` vegetation parcels (`r extract_cells(count_wellfield, columns = n, row = 1)` control parcels and `r extract_cells(count_wellfield, columns = n, row = 2)` wellfield parcels). The control and wellfield parcel groups, rarefied to only those parcels measured every year from 1992 to `r cYear`, are compared in @fig-plot-wellcontrol. The linear trend over the `r cYear - 1992`-year timeseries is computed in @fig-plot-wellcontrol-trends.
-
-At the wellfield scale, a four-panel map shows the parcels sampled with line-point in `r cYear`, color-coded by perennial cover and grass cover on the left, and by the change from baseline cover values on the right (e.g., for Laws, see @fig-lw-map). Parcels below baseline in total perennial cover or the perennial grass component are bordered in red.
-
-
-## Wellfield vs Control Group - Rarefied Subset (1992-current)
-
-```{r}
-#| label: fig-plot-wellcontrol-bl-cyear
-#| column: body-outset
-#| fig-cap: "Baseline compared to current year for control and wellfield parcels sampled every year since 1992. Total perennial cover, grass cover and shrub cover are shown separately."
-boxplot_well_cont(parcels, attributes_pfix,cYear)
+```{r wellfield-control-plot, fig.width=9, fig.height=5, fig.cap="Figure: Baseline (1986) versus current year cover by parcel type. Boxplots summarize total cover, grass, and shrub for control and wellfield parcels; significance labels indicate baseline vs current-year differences."}
+# Boxplots with white background theme (no mean markers)
+boxplot.w.c +
+  scale_x_discrete(labels = c(C = "Control", W = "Wellfield")) +
+  labs(x = "Parcel Type") +
+  theme_minimal() +
+  theme(
+    panel.background = element_rect(fill = "white", color = NA),
+    plot.background = element_rect(fill = "white", color = NA),
+    panel.grid.major = element_line(color = "gray90", linewidth = 0.5),
+    panel.grid.minor = element_line(color = "gray95", linewidth = 0.25),
+    strip.background = element_rect(fill = "white", color = "gray80"),
+    strip.text = element_text(color = "black", face = "bold")
+  )
 ```
 
-```{r}
-#| label: fig-plot-wellcontrol
-#| column: body-outset
-#| fig-cap: "Mean perennial vegetation cover in rarefied (sampled every year) wellfield (n=32) and control parcels (n=13). Grass cover and shrub cover are shown separately."
+```{r wellfield-control-text, results='asis'}
+box_data <- boxplot.w.c$data %>%
+  rename(cover_type = `Cover.Type`, value = Cover) %>%
+  filter(NominalYear %in% c(1986, cYear)) %>%
+  group_by(Type, NominalYear, cover_type) %>%
+  summarise(value = median(value, na.rm = TRUE), .groups = "drop") %>%
+  pivot_wider(
+    names_from = NominalYear,
+    values_from = value,
+    names_prefix = "Year_"
+  )
 
+fmt_delta <- function(current, baseline) {
+  if (is.na(current) || is.na(baseline)) return("NA")
+  delta <- round(current - baseline, 1)
+  sprintf("%+.1f%%", delta)
+}
 
-plot_wellcontrol
+fmt_pair <- function(current, baseline) {
+  if (is.na(current) || is.na(baseline)) return("NA")
+  paste0(round(baseline, 1), "% baseline vs ", round(current, 1), "% current")
+}
+
+get_vals <- function(type_label, cover_label) {
+  row <- box_data %>%
+    filter(Type == type_label, cover_type == cover_label)
+  baseline <- row[[paste0("Year_", 1986)]]
+  current <- row[[paste0("Year_", cYear)]]
+  list(baseline = baseline, current = current)
+}
+
+control_cover <- get_vals("C", "Cover")
+control_grass <- get_vals("C", "Grass")
+control_shrub <- get_vals("C", "Shrub")
+wellfield_cover <- get_vals("W", "Cover")
+wellfield_grass <- get_vals("W", "Grass")
+wellfield_shrub <- get_vals("W", "Shrub")
+
+control_text <- glue::glue(
+  "Control parcels (no pumping) show cover {fmt_pair(control_cover$current, control_cover$baseline)} ",
+  "(Δ {fmt_delta(control_cover$current, control_cover$baseline)}), ",
+  "grass {fmt_pair(control_grass$current, control_grass$baseline)} ",
+  "(Δ {fmt_delta(control_grass$current, control_grass$baseline)}), ",
+  "and shrub {fmt_pair(control_shrub$current, control_shrub$baseline)} ",
+  "(Δ {fmt_delta(control_shrub$current, control_shrub$baseline)})."
+)
+
+wellfield_text <- glue::glue(
+  "Wellfield parcels (pumping-affected) show cover {fmt_pair(wellfield_cover$current, wellfield_cover$baseline)} ",
+  "(Δ {fmt_delta(wellfield_cover$current, wellfield_cover$baseline)}), ",
+  "grass {fmt_pair(wellfield_grass$current, wellfield_grass$baseline)} ",
+  "(Δ {fmt_delta(wellfield_grass$current, wellfield_grass$baseline)}), ",
+  "and shrub {fmt_pair(wellfield_shrub$current, wellfield_shrub$baseline)} ",
+  "(Δ {fmt_delta(wellfield_shrub$current, wellfield_shrub$baseline)})."
+)
+
+cat(control_text, "\n\n", wellfield_text, "\n\n")
+cat("Values reflect median parcel cover within each group. Significance labels on the figure summarize baseline vs current-year tests for each cover metric within parcel type (ns = not significant; * indicates p < 0.05).")
 ```
 
-### Linear Trend
+```{r wellfield-control-multiyear-plot, fig.width=9, fig.height=5, fig.cap="Figure: Cover by parcel type for baseline (1986), previous year, and current year. Boxplots summarize total cover, grass, and shrub for control and wellfield parcels."}
+pYear <- cYear - 1
+parcels_multi <- parcels %>%
+  left_join(attributes_pfix %>% select(Parcel, Type), by = "Parcel") %>%
+  filter(NominalYear %in% c(1986, pYear, cYear), !is.na(Type)) %>%
+  select(Parcel, NominalYear, Type, Cover, Grass, Shrub) %>%
+  tidyr::pivot_longer(c(Cover, Grass, Shrub), names_to = "Cover.Type", values_to = "Cover")
 
-```{r}
-#| label: fig-plot-wellcontrol-trends
-#| column: body-outset
-#| fig-cap: "Mean total perennial cover (Cover), perennial grass (Grass), shrub (Shrub) aggregated to parcel groups (wellfield and control) and plotted over the baseline and reinventory period. The baseline year is plotted at the nominal year 1986 for brevity. P-values less than 0.05 denote slopes statistically different from zero."
+ggplot(parcels_multi, aes(x = Type, y = Cover, color = as.factor(NominalYear))) +
+  geom_boxplot() +
+  facet_wrap(~ Cover.Type) +
+  scale_x_discrete(labels = c(C = "Control", W = "Wellfield")) +
+  labs(x = "Parcel Type", color = "Year") +
+  theme_minimal() +
+  theme(
+    panel.background = element_rect(fill = "white", color = NA),
+    plot.background = element_rect(fill = "white", color = NA),
+    strip.background = element_rect(fill = "white", color = "gray80"),
+    strip.text = element_text(face = "bold")
+  )
+```
 
+## Parcel Trends Over Time
+
+```{r fig-trends-over-time, fig.width=6.5, fig.height=4.3, fig.cap="Figure: Trends in parcel-group cover over time. Lines show linear fits; p-values report whether slope differs from zero within each parcel group and cover type."}
 trends.w.c
 ```
 
-## Current year parcel summaries
+```{r fig-trends-over-time-text, results='asis'}
+trend_data <- trends.w.c$data %>%
+  rename(cover_type = `Cover.Type`, value = Cover) %>%
+  group_by(Type, cover_type) %>%
+  summarise(
+    p_value = summary(lm(value ~ NominalYear))$coefficients[2, 4],
+    .groups = "drop"
+  )
 
-Parcels significantly below baseline in `r cYear`.
+fmt_p <- function(x) ifelse(is.na(x), "NA", formatC(x, digits = 2, format = "g"))
 
-```{r}
-#| label: tbl-parcel-delta-sig-table
-#| column: body-outset
+control_cover_p <- trend_data %>% filter(Type == "Control", cover_type == "Cover") %>% pull(p_value)
+control_grass_p <- trend_data %>% filter(Type == "Control", cover_type == "Grass") %>% pull(p_value)
+control_shrub_p <- trend_data %>% filter(Type == "Control", cover_type == "Shrub") %>% pull(p_value)
+wellfield_cover_p <- trend_data %>% filter(Type == "Wellfield", cover_type == "Cover") %>% pull(p_value)
+wellfield_grass_p <- trend_data %>% filter(Type == "Wellfield", cover_type == "Grass") %>% pull(p_value)
+wellfield_shrub_p <- trend_data %>% filter(Type == "Wellfield", cover_type == "Shrub") %>% pull(p_value)
 
-parcel_datatable_significant
-  
+cat(glue::glue(
+  "Control parcels show no statistically significant linear trends in cover (P = {fmt_p(control_cover_p)}), grass (P = {fmt_p(control_grass_p)}), or shrub (P = {fmt_p(control_shrub_p)}). ",
+  "Wellfield parcels show statistically significant increasing linear trends in cover (P = {fmt_p(wellfield_cover_p)}) and shrub (P = {fmt_p(wellfield_shrub_p)}), ",
+  "while grass shows no statistically significant trend (P = {fmt_p(wellfield_grass_p)})."
+))
 ```
 
-```{r, eval=FALSE}
-#| label: fig-double-interactive-map
-#| fig-cap: "Interactive maps showing change in shrub cover and perennial grass cover from baseline (1984-1987) to the current year."
-#| fig-width: 7
-#| fig-height: 9
-#| column: page
+## Parcel Profiles (QA/QC)
 
+Parcel profiles are now provided on a dedicated page: [Parcel Profiles — QA/QC (All Parcels)](parcel_profiles.html). This page includes **all parcels** organized by wellfield from north to south — **Laws**, **Control**, **Big Pine**, **Taboose-Aberdeen**, **Thibaut Sawmill**, **Independence Oak**, **Symmes Shepherd**, **Bairs Georges** — with control parcels distributed throughout the valley just outside the zone of pumping influence.
 
+## Discussion
 
+Vegetation in Owens Valley is monitored annually to detect and attribute changes potentially caused by groundwater pumping. This approach follows **Green Book Section I.C.1.a**, which sets out procedures for determining whether decreases in perennial cover are **measurable** (statistically significant).
 
-limit <- parcels_shp_ttest 
+### Green Book and Baseline
 
-tmap_mode("view")    
+-   **Green Book**\
+    Provides criteria for evaluating measurable vegetation changes, including the use of baseline data from 1984-1987 and statistical tests.
 
-    tm_shape(limit, group = 'Wellfield - Parcels') +
-    tm_polygons(col =c("Shrub.Delta","Grass.Delta"),  title.col = "PCL_merged",  id = "PCL_merged",popup.vars = c("GB_TYPE.x","COMM_NAME","Grass.Delta","Shrub.Delta","Cover.Delta", "Type"), group = "Wellfield - Parcels")+
-    tmap_options(check.and.fix = TRUE)+
- 
-    tm_shape(canals_shp, group = 'Canals') +
-    tm_lines(col = "lightblue", scale = .4, group = 'Canals') +
+-   **1984-1987 Baseline**\
+    LADWP inventoried and mapped vegetation across 2,126 parcels. Groundwater-dependent parcels (Types B, C, D, E) serve as focal points for assessing pumping-induced drawdown effects.
 
-    tm_shape(streams_shp, group = 'Streams') +
-    tm_lines(col = "blue", scale = .8, group = 'Streams')+
-    tm_text("NAME", size = .5,  col = "darkblue",shadow=FALSE,remove.overlap=FALSE, group = 'Labels', auto.placement = .3, bg.color = 'lightblue')+
-    
-    tm_shape(monsites_shp, group = 'On/Off Monitoring Sites') +
-    tm_text("SITE",  col = "black", size=.7,remove.overlap=TRUE,shadow=FALSE,group = 'Labels',auto.placement = .1,bg.color = 'pink') +
-    tm_symbols(col = "pink", scale = .05, title.col = "SITE",  id = "SITE",popup.vars = c("SITE","TYPE"),group = 'On/Off Monitoring Sites')+
+### Interpretation
 
-    tm_shape(or_shp, group = 'River') +
-    tm_lines(col = "blue", scale = 1.2, group = 'River')+
-    tm_text("NAME", size = .5,  col = "lightblue",shadow=FALSE,remove.overlap=FALSE, group = 'Labels', auto.placement = .3, bg.color = 'darkblue')+
+**Direction of trends (with statistical significance):** Control parcels show no statistically significant linear trends in cover, grass, or shrub. Wellfield parcels show statistically significant **increasing** linear trends in cover and shrub; wellfield grass shows no statistically significant trend. P-values are reported in the “Parcel Trends Over Time” section above.
 
-    tm_shape(laa_shp, group = 'LAA') +
-    tm_lines(col = "blue", scale = 1, group = 'LAA')+
-    tm_shape(lakes_shp, group = 'Lakes') +
-    tm_polygons(col = "blue", scale = 1, group = 'Lakes')
-
-```
-
-Parcels significantly below baseline for the past five years or more.
-
-```{r}
-#| label: tbl-datatable-chronic
-#| column: body-outset
-
-parcel_datatable_chronic
-# note -update this function in functions library -- done 6/6/24
-```
-
-
-
-
-## Wellfield Maps
-
-### Laws
-
-```{r}
-#| label: fig-lw-map
-#| fig-cap: "Laws wellfield parcels sampled in the most recent year showing perennial grass cover and total perennial cover on the left and the differnce from baseline values on the right. Parcels statistically deviating from baseline in the current year are boardered in red."
-#| column: body-outset
-#| fig-height: 9
-
-panel_map_lw
-
-```
-
-```{r, eval=FALSE}
-#| label: tbl-datatable-lw
-#| tbl-cap: "Wellfield parcels statistically below baseline in at least the current year."
-#| tbl-column:  body
-#| cap-location: top
-
-make_wellfield_table(deltas_ttest_att, 'Laws')
-
-```
-
-### Big Pine
-
-```{r}
-#| label: fig-bp-map
-#| fig-cap: "Big Pine wellfield parcels sampled in the most recent year showing perennial grass cover and total perennial cover on the left and the differnce from baseline values on the right."
-#| column: body-outset
-#| fig-height: 9
-
-panel_map_bp
-
-```
-
-```{r, eval=FALSE}
-#| label: tbl-datatable-bp
-#| tbl-cap: "Wellfield parcels statistically below baseline in at least the current year."
-#| tbl-column:  body
-#| cap-location: top
-
-make_wellfield_table(deltas_ttest_att, 'Big Pine')
-
-```
-
-### Taboose-Aberdeen
-
-```{r}
-#| label: fig-ta-map
-#| fig-cap: "Taboose-Aberdeen wellfield parcels sampled in the most recent year showing perennial grass cover and total perennial cover on the left and the differnce from baseline values on the right."
-#| column: body-outset
-#| fig-height: 9
-
-panel_map_ta
-
-
-```
-
-```{r, eval=FALSE}
-#| label: tbl-datatable-ta
-#| tbl-cap: "Wellfield parcels statistically below baseline in at least the current year."
-#| tbl-column:  body
-#| cap-location: top
-
-make_wellfield_table(deltas_ttest_att, 'Taboose-Aberdeen')
-
-```
-
-### Thibaut-Sawmill
-
-```{r}
-#| label: fig-ts-map
-#| fig-cap: "Thibaut-Sawmill wellfield parcels sampled in the most recent year showing perennial grass cover and total perennial cover on the left and the differnce from baseline values on the right."
-#| column: body-outset
-#| fig-height: 9
-
-panel_map_ts
-
-```
-
-```{r, eval=FALSE}
-#| label: tbl-datatable-ts
-#| tbl-cap: "Wellfield parcels statistically below baseline in at least the current year."
-#| tbl-column:  body
-#| cap-location: top
-
-make_wellfield_table(deltas_ttest_att, 'Thibaut-Sawmill')
-
-```
-
-### Independence-Oak
-
-```{r}
-#| label: fig-io-map
-#| fig-cap: "Independence-Oak wellfield parcels sampled in the most recent year showing perennial grass cover and total perennial cover on the left and the differnce from baseline values on the right."
-#| column: body-outset
-#| fig-height: 9
-
-
-panel_map_io
-
-
-```
-
-```{r, eval=FALSE}
-#| label: tbl-datatable-io
-#| tbl-cap: "Wellfield parcels statistically below baseline in at least the current year."
-#| tbl-column:  body
-#| cap-location: top
-
-make_wellfield_table(deltas_ttest_att, 'Independence-Oak')
-
-```
-
-### Symmes-Shepherd
-
-```{r}
-#| label: fig-ss-map
-#| fig-cap: "Symmes-Shepherd wellfield parcels sampled in the most recent year showing perennial grass cover and total perennial cover on the left and the differnce from baseline values on the right."
-#| column: body-outset
-#| fig-height: 9
-
-panel_map_ss
-
-
-```
-
-```{r, eval=FALSE}
-#| label: tbl-datatable-ss
-#| tbl-cap: "Wellfield parcels statistically below baseline in at least the current year."
-#| tbl-column:  body
-#| tbl-cap-location: top
-
-make_wellfield_table(deltas_ttest_att, 'Symmes-Shepherd')
-
-```
-
-### Bairs-George
-
-```{r}
-#| label: fig-bg-map
-#| fig-cap: "Bairs-George wellfield parcels sampled in the most recent year showing perennial grass cover and total perennial cover on the left and the differnce from baseline values on the right."
-#| column: body-outset
-#| fig-height: 9
-
-
-panel_map_bg
-
-
-```
-
-```{r, eval=FALSE}
-#| label: tbl-datatable-bg
-#| tbl-cap: "Wellfield parcels statistically below baseline in at least the current year."
-#| tbl-column:  body
-#| cap-location: top
-
-make_wellfield_table(deltas_ttest_att, 'Bairs-George')
-
-```
-
-
-## Discussion {#sec-conclusions}
-
-The methods outlined in this report have identified wellfield parcels that have been statistically below baseline for the past five consecutive years in terms of total perennial cover or perennial grass cover. This process follows the statistical framework established in Green Book Section I.C.1.a (Box I.C.I.a.ii.a), ensuring that the effects are measured reliably.
-
-The automated approach allows for consistent identification of parcels with significant changes. By focusing on both total perennial cover and perennial grass cover, the analysis provides a clear picture of vegetation health in groundwater-dependent areas.
-
-Using statistical techniques, such as Welch's t-test and one-sample t-tests, ensures the robustness of detecting changes from the baseline. Integrating these methods into an R-based data pipeline enhances the transparency and reproducibility of the findings.
-
-### Management Implications
-
-Flagged parcels indicate areas where groundwater pumping may have impacted vegetation in the past. These areas will be further evaluated under Green Book Section I.C.1.b, *Determining Attributability*, to identify the specific causes of the observed changes.
-
-### Access to Detailed Information
-
-Detailed information on each flagged parcel can be investigated through the interactive platform at [Inyo Shiny](https://inyo.shinyapps.io/inyoShiny/). This resource provides parcel-specific data, including statistical summaries and trend analyses.
-
+**Flagged parcels:** Flagged parcels indicate measurable (statistically significant) deviations from baseline. Whether these changes are attributable to pumping vs. other factors (e.g., drought, land use) are evaluated under **Green Book Section I.C.1.b**.
 
 ## Appendix
 
-The table below includes parcel summaries averaged over the transect samples for all years in which each parcel was sampled. The table allows for filtering, sorting, searching, and exporting of the filtered data.
+### References
 
-```{r}
-#| label: tbl-all-yr-parcel-deltas
-#| include: true
-#| tbl-column: body-outset
-
-parcels_deltas %>%
-  select(Parcel, Year,Cover, Cover.Delta, Grass, Grass.Delta, Shrub, Shrub.Delta) %>%
-  mutate(across(Cover:Shrub.Delta, round, 1)) %>%
-  datatable(extensions = c('Buttons','FixedColumns'),
-            filter = c("top"),
-            options = list(
-              dom = 'Blfrtip',
-              buttons = c('copy', 'csv', 'excel', 'pdf', 'print'),
-              scrollX = TRUE,
-              fixedColumns = list(leftColumns = 2, rightColumns = 0),
-              pageLength = 5,
-              autoWidth = TRUE)
-            )
-
-```
-
-
+-   [Green Book Section I.C.1.a](https://www.inyowater.org/wp-content/uploads/2017/09/GBMemo_SCfeb2017.pdf)\
+-   Inyo-LA Water Agreement (1991)\
+-   Additional scripts and details: [GitHub repository](https://inyo-gov.github.io/vegetation-condition/)\
+-   Attributability analyses (I.C.1.b): [green-book-IC1b](https://github.com/inyo-gov/green-book-IC1b)

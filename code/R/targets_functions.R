@@ -1,3 +1,12 @@
+library(DBI); library(duckdb)
+connect_motherduck <- function(){
+  dbConnect(
+    duckdb::duckdb_http(),
+    url   = Sys.getenv("MOTHERDUCK_URL"),
+    token = Sys.getenv("MOTHERDUCK_TOKEN")
+  )
+}
+
 #' Pivot ICWD Data to Long Format
 #'
 #' @param icwd_wide A wide-format data frame containing ICWD data.
@@ -69,36 +78,158 @@ filt_lela <- function(data) {
 #' @examples
 #' mult_to_single_parcel_name(x)
 mult_to_single_parcel_name <- function(x) {
-  x$Parcel[x$Parcel == "TIN028_FSP022_FSP019"] <- "TIN028"
-  x$Parcel[x$Parcel == "TIN028_FSP019_FSP022"] <- "TIN028"
-  x$Parcel[x$Parcel == "MAN006_IND229"] <- "MAN006"
-  x$Parcel[x$Parcel == "MAN006/IND229"] <- "MAN006"
-  x$Parcel[x$Parcel == "LAW137_PLC210"] <- "LAW137"
-  x$Parcel[x$Parcel == "LAW137/PLC210"] <- "LAW137"
-  x$Parcel[x$Parcel == "LAW108_FSL047"] <- "LAW108"
-  x$Parcel[x$Parcel == "LAW108/FSL047"] <- "LAW108"
-  x$Parcel[x$Parcel == "LAW109_FSL048"] <- "FSL048"
-  x$Parcel[x$Parcel == "IND163_BEE017"] <- "IND163"
-  x$Parcel[x$Parcel == "IND139_MAN005"] <- "IND139"
-  x$Parcel[x$Parcel == "IND139/MAN005"] <- "IND139"
-  x$Parcel[x$Parcel == "IND024_BLK103"] <- "IND024"
-  x$Parcel[x$Parcel == "IND024/BLK103"] <- "IND024"
-  x$Parcel[x$Parcel == "FSP004_BGP188"] <- "FSP004"
-  x$Parcel[x$Parcel == "FSP004/BGP188"] <- "FSP004"
-  x$Parcel[x$Parcel == "FSP006_BGP182"] <- "FSP006"
-  x$Parcel[x$Parcel == "FSP006/BGP182"] <- "FSP006"
+  # ABD012
+  x$Parcel[x$Parcel == "BLK029"] <- "ABD012"
   x$Parcel[x$Parcel == "ABD012_BLK029"] <- "ABD012"
   x$Parcel[x$Parcel == "ABD012/BLK029"] <- "ABD012"
-  x$Parcel[x$Parcel == "BLK002_TIN061"] <- "BLK002"
-  x$Parcel[x$Parcel == "TIN061_BLK002"] <- "BLK002"
+
+  # BIS025
+  x$Parcel[x$Parcel == "BIS025_FSL157"] <- "BIS025"
+
+  # BIS026
+  x$Parcel[x$Parcel == "BIS026_FSL156"] <- "BIS026"
+
+  # BIS055
+  x$Parcel[x$Parcel == "FSL214"] <- "BIS055"
   x$Parcel[x$Parcel == "BIS055_FSL214"] <- "BIS055"
   x$Parcel[x$Parcel == "BIS055/FSL214"] <- "BIS055"
-  x$Parcel[x$Parcel == "BIS025_FSL157"] <- "BIS025"
-  x$Parcel[x$Parcel == "BIS026_FSL156"] <- "BIS026"
+
+  # BLK002
+  x$Parcel[x$Parcel == "TIN061"] <- "BLK002"
   x$Parcel[x$Parcel == "BLK002_TIN061"] <- "BLK002"
+  x$Parcel[x$Parcel == "TIN061_BLK002"] <- "BLK002"
+
+  # FSL048
+  x$Parcel[x$Parcel == "LAW109"] <- "FSL048"
+  x$Parcel[x$Parcel == "LAW109_FSL048"] <- "FSL048"
+
+  # FSP004
+  x$Parcel[x$Parcel == "BGP188"] <- "FSP004"
+  x$Parcel[x$Parcel == "FSP004_BGP188"] <- "FSP004"
+  x$Parcel[x$Parcel == "FSP004_BPG188"] <- "FSP004"
+  x$Parcel[x$Parcel == "FSP004/BGP188"] <- "FSP004"
+
+  # FSP006
+  x$Parcel[x$Parcel == "BGP182"] <- "FSP006"
+  x$Parcel[x$Parcel == "FSP006_BGP182"] <- "FSP006"
+  x$Parcel[x$Parcel == "FSP006/BGP182"] <- "FSP006"
+
+  # IND024
+  x$Parcel[x$Parcel == "BLK103"] <- "IND024"
+  x$Parcel[x$Parcel == "IND024_BLK103"] <- "IND024"
+  x$Parcel[x$Parcel == "IND024/BLK103"] <- "IND024"
+
+  # IND139
+  x$Parcel[x$Parcel == "MAN005"] <- "IND139"
+  x$Parcel[x$Parcel == "IND139_MAN005"] <- "IND139"
+  x$Parcel[x$Parcel == "IND139/MAN005"] <- "IND139"
+
+  # IND163
+  x$Parcel[x$Parcel == "BEE017"] <- "IND163"
+  x$Parcel[x$Parcel == "IND163_BEE017"] <- "IND163"
+
+  # LAW108
+  x$Parcel[x$Parcel == "FSL047"] <- "LAW108"
+  x$Parcel[x$Parcel == "LAW108_FSL047"] <- "LAW108"
+  x$Parcel[x$Parcel == "LAW108/FSL047"] <- "LAW108"
+
+  # LAW137
+  x$Parcel[x$Parcel == "PLC210"] <- "LAW137"
+  x$Parcel[x$Parcel == "LAW137_PLC210"] <- "LAW137"
+  x$Parcel[x$Parcel == "LAW137/PLC210"] <- "LAW137"
+
+  # MAN006
+  x$Parcel[x$Parcel == "MAN006_IND229"] <- "MAN006"
+  x$Parcel[x$Parcel == "MAN006/IND229"] <- "MAN006"
+  x$Parcel[x$Parcel == "IND229"] <- "MAN006"
+
+  # TIN028
+  x$Parcel[x$Parcel == "FSP019"] <- "TIN028"
+  x$Parcel[x$Parcel == "FSP022"] <- "TIN028"
+  x$Parcel[x$Parcel == "TIN028_FSP022_FSP019"] <- "TIN028"
+  x$Parcel[x$Parcel == "TIN028_FSP019_FSP022"] <- "TIN028"
 
   return(x)
 }
+
+ #' Build seasonal remote-sensing summaries from Earth Engine stats
+ #'
+ #' @param stats_dir Path to Earth Engine stats directory.
+ #' @param year Target year for seasonal aggregation.
+ #' @param doy_start Start day-of-year for seasonal window.
+ #' @param doy_end End day-of-year for seasonal window.
+ #' @param qa_ok QA value to keep (default 0).
+ #' @param max_cloud Maximum CLOUD_SCORE to keep.
+ #' @param min_ndvi Minimum NDVI to keep.
+ #' @return A data frame with parcel/year seasonal summaries and PPT.
+ #' @export
+ build_rs_seasonal_from_stats <- function(stats_dir, year, doy_start, doy_end,
+                                          qa_ok = 0, max_cloud = 70, min_ndvi = 0) {
+  landsat_files <- list.files(
+    path = stats_dir,
+    pattern = "*landsat_daily.csv",
+    recursive = TRUE,
+    full.names = TRUE,
+    include.dirs = TRUE
+  )
+  if (length(landsat_files) == 0) {
+    stop("No landsat_daily.csv files found in stats_dir.")
+  }
+
+  landsat <- purrr::map_dfr(landsat_files, readr::read_csv, show_col_types = FALSE)
+
+  rs_filtered <- landsat %>%
+    dplyr::mutate(DATE = lubridate::make_date(YEAR, MONTH, DAY)) %>%
+    dplyr::filter(
+      YEAR == year,
+      QA == qa_ok,
+      CLOUD_SCORE < max_cloud,
+      dplyr::between(DOY, doy_start, doy_end),
+      NDVI_SUR > min_ndvi
+    )
+
+  rs_summary <- rs_filtered %>%
+    dplyr::group_by(ZONE_NAME, YEAR) %>%
+    dplyr::summarise(
+      mean.ndvi = mean(NDVI_SUR, na.rm = TRUE),
+      mean.ndwi.gr.nir = mean(NDWI_GREEN_NIR_SUR, na.rm = TRUE),
+      mean.ndwi.gr.swir1 = mean(NDWI_GREEN_SWIR1_SUR, na.rm = TRUE),
+      mean.ndwi.nir.swir1 = mean(NDWI_NIR_SWIR1_SUR, na.rm = TRUE),
+      mean.tc.bright = mean(TC_BRIGHT, na.rm = TRUE),
+      mean.tc.wet = mean(TC_WET, na.rm = TRUE),
+      mean.tc.green = mean(TC_GREEN, na.rm = TRUE),
+      sd.ndvi = sd(NDVI_SUR, na.rm = TRUE),
+      n = dplyr::n(),
+      .groups = "drop"
+    )
+
+  gridmet_files <- list.files(
+    path = stats_dir,
+    pattern = "*gridmet_monthly.csv",
+    recursive = TRUE,
+    full.names = TRUE,
+    include.dirs = TRUE
+  )
+  if (length(gridmet_files) == 0) {
+    stop("No gridmet_monthly.csv files found in stats_dir.")
+  }
+
+  gridmet <- purrr::map_dfr(gridmet_files, readr::read_csv, show_col_types = FALSE)
+
+  gridmet_summary <- gridmet %>%
+    dplyr::filter(WATER_YEAR == year) %>%
+    dplyr::group_by(ZONE_NAME, WATER_YEAR) %>%
+    dplyr::summarise(
+      wy.ppt = sum(PPT, na.rm = TRUE),
+      sd.ppt = sd(PPT, na.rm = TRUE),
+      n.month.ppt = dplyr::n(),
+      .groups = "drop"
+    )
+
+  rs_summary %>%
+    dplyr::left_join(gridmet_summary, by = c("ZONE_NAME", "YEAR" = "WATER_YEAR")) %>%
+    dplyr::rename(Year = YEAR, NDVI_SUR = mean.ndvi, PPT = wy.ppt, Parcel = ZONE_NAME)
+ }
 
 
 #' Summarise Cover Types to Transect Level
@@ -716,7 +847,7 @@ join_summaries <- function(parcels_deltas, attributes_pfix, parcel_year_meta_com
   return(par_delta_test_att)
 }
 
-
+# Summary Tables----
 #' Create Parcel Data Table
 #'
 #' @param deltas_ttest_att A data frame containing the results of the t-tests.

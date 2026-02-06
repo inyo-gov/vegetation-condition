@@ -1,16 +1,22 @@
 project:
   type: website
   output-dir: docs
+  render:
+    - index.qmd
+    - lpt_etl.qmd
+    - parcel_profiles.qmd
 
 website:
   title: "Vegetation Condition"
-  favicon: "images/inyologo.png"
+  favicon: "images/inyo_logo.png"
   navbar:
     left:
-      - href: index.qmd
-        text: Line Point Transects
       - href: lpt_etl.qmd
-        text: Data Source
+        text: Data
+      - href: index.qmd
+        text: Annual Summary
+      - href: parcel_profiles.qmd
+        text: Parcel Profiles
       - icon: github
         href: https://github.com/inyo-gov/vegetation-condition
 
@@ -20,5 +26,6 @@ format:
     linkcolor: blue
     css: styles.css
     toc: true
+    embed-resources: true
 
 editor: visual

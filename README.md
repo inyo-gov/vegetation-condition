@@ -53,6 +53,39 @@ The methods outlined in this report automatically flag wellfield parcels that ha
 - `_quarto.yml`: Configuration file for Quarto.
 - `index.qmd`: Quarto markdown file for the main report.
 
+## Building the site
+
+- **Home page:** `index.qmd` renders to `docs/index.html` (Annual Summary).  
+- **Data page:** `lpt_etl.qmd` → `docs/lpt_etl.html`.  
+- **Parcel profiles:** `parcel_profiles.qmd` → `docs/parcel_profiles.html` (optional; currently excluded from default `quarto render` for speed).
+
+**Important:** Always run the render **from the project root** so that output and all assets go into `docs/`:
+
+```bash
+cd /path/to/vegetation-condition   # project root
+quarto render index.qmd
+```
+
+When the render finishes, you should see:
+
+- `docs/index.html`
+- `docs/index_files/figure-html/*.png` (figures)
+- `docs/site_libs/` (JavaScript/CSS for tables and widgets)
+
+If figures or tables don’t show in the browser:
+
+1. **Check that assets are in `docs/`:**  
+   List `docs/index_files/figure-html/` and `docs/site_libs/`; if they’re missing, the render was run from the wrong directory or didn’t complete.
+
+2. **View the site over HTTP, not as a local file:**  
+   Opening `docs/index.html` directly (`file://`) can prevent scripts and widgets (DataTables, map) from loading. Use a local server instead:
+   ```bash
+   quarto preview
+   ```
+   Or from the project root: `cd docs && python3 -m http.server 8000`, then open `http://localhost:8000`.
+
+If `docs/index.html` shows Parcel Profiles content instead of the Annual Summary, run `quarto render index.qmd` from the project root and wait for it to finish (pandoc can take 10+ minutes).
+
 ## Getting Started
 
 ### Prerequisites

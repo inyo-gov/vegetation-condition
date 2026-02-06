@@ -1,0 +1,59 @@
+/* Center main content on all pages (like article layout); reserve space for right TOC */
+.page-columns .content,
+.main-container,
+#quarto-content .content {
+  max-width: 75em;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+  box-sizing: border-box;
+}
+
+/* Ensure TOC sidebar has room (grid may already reserve it; this backs up narrow viewports) */
+#quarto-content.page-columns {
+  padding-right: 280px;
+}
+
+/* Prevent very wide figures from blowing out the layout (e.g. parcel profiles) */
+#quarto-content .content .cell-output-display img,
+#quarto-content .content figure img {
+  max-width: 100%;
+}
+
+.tocify {
+  position: fixed;
+  right: 20px;
+  top: 110px;
+  width: 240px;
+  max-height: 75vh;
+  overflow-y: auto;
+  z-index: 1;
+}
+
+.column-screen {
+  padding-left: 16px;
+  padding-right: 16px;
+  box-sizing: border-box;
+}
+
+.parcel-profile-figure img,
+.parcel-profile-figure svg {
+  display: block;
+  width: 100% !important;
+  height: auto;
+}
+
+@media (max-width: 991px) {
+  .page-columns .content,
+  .main-container {
+    margin-right: 0;
+  }
+
+  .tocify {
+    position: static;
+    width: auto;
+    max-height: none;
+  }
+
+}

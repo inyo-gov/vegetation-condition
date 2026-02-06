@@ -24,11 +24,22 @@ tar_option_set(
 )
 # targets list----
 list(
+  # tar_target(
+  #   motherduck_con,
+  #   connect_motherduck(),
+  #   format = "connection"
+  # ),
+
   # Current YEAR parameter----
-  tar_target(cYear, 2024),
+  tar_target(cYear, 2025),
 
   # Previous Year
   tar_target(pYear, cYear - 1),
+
+  # Remote sensing seasonal window parameters----
+  tar_target(rs_stats_dir, "/Users/zac/workspace/earth-engine-tools/stats"),
+  tar_target(rs_doy_start, 196),
+  tar_target(rs_doy_end, 258),
 
   # GIS----
   tar_target(parcels_shp_file, "data/gisdata/LA_parcels_rasterizedd.shp", format = 'file'),
@@ -55,13 +66,38 @@ list(
 
   # April Depth to water updated every year ----
   tar_target(dtw_file, paste0("data/dtw_",cYear,".csv"), format = "file"),
-  tar_target(dtw, read.csv(dtw_file)),
+  tar_target(dtw_hist_file, "data/dtw_2024.csv", format = "file"),
+  tar_target(dtw_hist, read.csv(dtw_hist_file) %>% select(Parcel, DTW, Year)),
+  tar_target(dtw_current, read.csv(dtw_file) %>% select(Parcel, DTW, Year)),
+  tar_target(dtw, bind_rows(dtw_hist, dtw_current) %>% distinct(Parcel, Year, .keep_all = TRUE)),
   tar_target(dtw_pfix, mult_to_single_parcel_name(x = dtw)),
 
   # remote sensing added after Sep 15
-  #tar_target(rs_file, paste0("data/rs_",cYear,".csv"), format = "file"),
-  tar_target(rs_file, paste0("data/rs_2023.csv"), format = "file"),
-  tar_target(rs, read.csv(rs_file)),
+  tar_target(rs_prev_file, paste0("data/rs_", pYear, ".csv"), format = "file"),
+  tar_target(rs_prev, read.csv(rs_prev_file)),
+  tar_target(
+    rs_current,
+    build_rs_seasonal_from_stats(
+      stats_dir = rs_stats_dir,
+      year = cYear,
+      doy_start = rs_doy_start,
+      doy_end = rs_doy_end
+    )
+  ),
+  tar_target(
+    rs_combined,
+    bind_rows(rs_prev, rs_current) %>% distinct(Parcel, Year, .keep_all = TRUE)
+  ),
+  tar_target(
+    rs_output_csv,
+    {
+      rs_path <- paste0("data/rs_", cYear, ".csv")
+      readr::write_csv(rs_combined, rs_path)
+      rs_path
+    },
+    format = "file"
+  ),
+  tar_target(rs, rs_combined),
   tar_target(rs_pfix, mult_to_single_parcel_name(x = rs)),
 
   # Parcel attributes----
