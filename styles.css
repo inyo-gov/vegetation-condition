@@ -1,3 +1,62 @@
+/* Custom styles for Inyo County Quarto sites (aligned with hydro-data) */
+
+/* Global font consistency */
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-weight: 600;
+}
+
+/* Custom navbar styling (Inyo blue theme) */
+.navbar {
+  background-color: #2E86AB !important;
+}
+
+.navbar-brand {
+  display: flex;
+  align-items: center;
+  color: white !important;
+}
+
+.navbar-nav .nav-link {
+  color: white !important;
+}
+
+.navbar-nav .nav-link:hover {
+  color: #e9ecef !important;
+}
+
+.navbar-text {
+  color: white !important;
+}
+
+.navbar-brand img {
+  height: 40px;
+  max-height: 40px;
+  width: auto;
+  margin-right: 10px;
+  object-fit: contain;
+  background-color: white;
+  border-radius: 4px;
+  padding: 2px;
+}
+
+/* Better link styling */
+a {
+  color: #2E86AB;
+  text-decoration: none;
+}
+
+a:hover {
+  color: #1e5a73;
+  text-decoration: underline;
+}
+
 /* Center main content on all pages (like article layout); reserve space for right TOC */
 .page-columns .content,
 .main-container,
@@ -19,6 +78,19 @@
 #quarto-content .content .cell-output-display img,
 #quarto-content .content figure img {
   max-width: 100%;
+  height: auto;
+}
+
+/* Better figure styling (responsive on mobile) */
+.figure {
+  margin: 2rem 0;
+  text-align: center;
+}
+
+.figure img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.375rem;
 }
 
 .tocify {
@@ -44,10 +116,19 @@
   height: auto;
 }
 
+/* Mobile: collapse TOC and free horizontal space */
 @media (max-width: 991px) {
+  #quarto-content.page-columns {
+    padding-right: 0;
+    padding-left: 15px;
+  }
+
   .page-columns .content,
-  .main-container {
+  .main-container,
+  #quarto-content .content {
     margin-right: 0;
+    padding-left: 15px;
+    padding-right: 15px;
   }
 
   .tocify {
@@ -55,5 +136,27 @@
     width: auto;
     max-height: none;
   }
+}
 
+/* Smaller viewports: tighter typography and touch-friendly spacing */
+@media (max-width: 768px) {
+  body {
+    font-size: 15px;
+  }
+
+  .page-columns .content,
+  .main-container,
+  #quarto-content .content {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .navbar-brand img {
+    height: 32px;
+    max-height: 32px;
+  }
+
+  .figure {
+    margin: 1rem 0;
+  }
 }

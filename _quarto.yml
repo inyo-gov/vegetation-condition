@@ -10,6 +10,8 @@ website:
   title: "Vegetation Condition"
   favicon: "images/inyo_logo.png"
   navbar:
+    title: "Vegetation Condition"
+    logo: images/inyo_logo.png
     left:
       - href: lpt_etl.qmd
         text: Data
@@ -19,13 +21,19 @@ website:
         text: Parcel Profiles
       - icon: github
         href: https://github.com/inyo-gov/vegetation-condition
+    background: dark
+    search: true
 
 format:
   html:
-    theme: sandstone
-    linkcolor: blue
+    theme: cosmo
+    linkcolor: "#2E86AB"
     css: styles.css
     toc: true
     embed-resources: true
+    fig-responsive: true
+    fig-dir: figure-html
+    subtitle: "Inyo County, California"
+    footer: "© 2026 Inyo County, California. All rights reserved."
 
 editor: visual
