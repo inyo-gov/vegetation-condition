@@ -30,6 +30,9 @@ format:
     linkcolor: "#2E86AB"
     css: styles.css
     toc: true
+    toc-depth: 3
+    toc-location: right
+    page-layout: article
     embed-resources: true
     fig-responsive: true
     fig-dir: figure-html

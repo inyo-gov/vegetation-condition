@@ -90,6 +90,17 @@ If figures or tables don’t show in the browser:
 
 If `docs/index.html` shows Parcel Profiles content instead of the Annual Summary, run `quarto render index.qmd` from the project root and wait for it to finish (pandoc can take 10+ minutes).
 
+### Publishing to GitHub Pages
+
+The site is published from the **`docs/`** folder. In the repo **Settings → Pages**:
+
+- **Source:** Deploy from a branch  
+- **Branch:** `main`  
+- **Folder:** `/docs`  
+- **Save**
+
+The repo includes `docs/.nojekyll` so GitHub does not run Jekyll on the built site. After you push changes to `docs/` (e.g. after `quarto render`), the site updates automatically. If the live site still shows an old navbar, theme, or logo, try a hard refresh (Ctrl+Shift+R or Cmd+Shift+R) or clear the cache for the site.
+
 ## Getting Started
 
 ### Prerequisites

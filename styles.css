@@ -57,21 +57,53 @@ a:hover {
   text-decoration: underline;
 }
 
-/* Center main content on all pages (like article layout); reserve space for right TOC */
+/* Same body width on all pages: fill the main grid column (no extra max-width) */
 .page-columns .content,
 .main-container,
 #quarto-content .content {
-  max-width: 75em;
-  margin-left: auto;
-  margin-right: auto;
+  max-width: none;
+  width: 100%;
+  margin-left: 0;
+  margin-right: 0;
   padding-left: 1.5rem;
   padding-right: 1.5rem;
   box-sizing: border-box;
 }
 
-/* Ensure TOC sidebar has room (grid may already reserve it; this backs up narrow viewports) */
+/* Ensure TOC sidebar has room; use grid so main content and sidebar never overlap */
 #quarto-content.page-columns {
-  padding-right: 280px;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 280px);
+  grid-template-areas: "main margin";
+  padding-right: 0;
+  gap: 0 1.5rem;
+}
+
+#quarto-content.page-columns > #quarto-margin-sidebar,
+#quarto-content.page-columns > .margin-sidebar {
+  grid-area: margin !important;
+  min-width: 0;
+  order: 2;
+}
+
+#quarto-content.page-columns > main.content {
+  grid-area: main !important;
+  min-width: 0;
+  max-width: 100%;
+  padding-right: 0;
+  order: 1;
+}
+
+/* Fallback: keep main content from extending under sidebar if grid is overridden */
+#quarto-content.page-columns main.content {
+  margin-right: 0;
+  box-sizing: border-box;
+}
+
+#quarto-content.page-columns .content,
+#quarto-content.page-columns #quarto-document-content {
+  max-width: 100%;
+  overflow-wrap: break-word;
 }
 
 /* Prevent very wide figures from blowing out the layout (e.g. parcel profiles) */
@@ -93,14 +125,38 @@ a:hover {
   border-radius: 0.375rem;
 }
 
+/* Right-hand TOC / margin sidebar: allow wrapping so entries don’t truncate */
+#quarto-margin-sidebar,
+#quarto-margin-sidebar nav#TOC,
+.sidebar.margin-sidebar {
+  min-width: 0;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+}
+
+#quarto-margin-sidebar #TOC a,
+#quarto-margin-sidebar .nav-link {
+  white-space: normal;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
 .tocify {
   position: fixed;
   right: 20px;
   top: 110px;
   width: 240px;
+  max-width: min(280px, 100%);
   max-height: 75vh;
   overflow-y: auto;
   z-index: 1;
+}
+
+/* Let main content column shrink so it doesn’t overflow the grid */
+#quarto-content .column-page-inner,
+#quarto-content .column-margin,
+.page-columns .column-page {
+  min-width: 0;
 }
 
 .column-screen {
@@ -116,11 +172,23 @@ a:hover {
   height: auto;
 }
 
-/* Mobile: collapse TOC and free horizontal space */
+/* Mobile: single column so TOC stacks below main, no overlap */
 @media (max-width: 991px) {
   #quarto-content.page-columns {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    grid-template-areas: "main" "margin" !important;
     padding-right: 0;
     padding-left: 15px;
+  }
+
+  #quarto-content.page-columns > #quarto-margin-sidebar,
+  #quarto-content.page-columns > .margin-sidebar {
+    grid-area: margin !important;
+  }
+
+  #quarto-content.page-columns > main.content {
+    grid-area: main !important;
   }
 
   .page-columns .content,

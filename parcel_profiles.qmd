@@ -8,7 +8,6 @@ format:
     toc: true
     toc-depth: 3
     number-sections: true
-    page-layout: full
 ---
 
 ```{r setup, include=FALSE, warning=FALSE, message=FALSE}
@@ -500,6 +499,4 @@ for (i in seq_len(nrow(profile_parcels))) {
 }
 ```
 
-## Interpretation Notes
-
-These profiles summarize observed changes for all monitored parcels (QA/QC). Potential drivers of proportional grass change include pumping‑related drawdown, climate variability, land use, or site‑specific conditions. Attribution requires integrating parcel trends with soil‑moisture and pumping management records.
+##

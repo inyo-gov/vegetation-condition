@@ -5,7 +5,7 @@ format:
   html: 
     toc: true
     toc-depth: 3
-    page-layout: full
+    number-sections: true
     anchor-sections: true
     smooth-scroll: true
     html-math-method: katex

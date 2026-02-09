@@ -3,11 +3,12 @@ title: "BOX I.C.1.a.ii Transects for Monitoring Vegetation Response to Pumping"
 subtitle: "Automated Data Processing and Statistical Report"
 author: "Inyo County Water Department"
 date: "2025-01-09"
-output:
-  html_document:
+format:
+  html:
     toc: true
-    toc_depth: 3
-    number_sections: true
+    toc-depth: 3
+    toc-location: right
+    number-sections: true
 ---
 
 ```{r setup, include=FALSE, warning=FALSE, message=FALSE}
