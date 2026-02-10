@@ -141,6 +141,7 @@ Once this is in place, the annual update flow stays the same (update `cYear`, ad
 ---
 
 ## 5. Guide for AI agents: walking a human through the update
+Scenario when gaps in technical knowledge transfer have occured, point an AI assistant to this section to help novice staff get up to speed quickly.
 
 This section is for an AI assistant that is guiding a human through the annual update. Use it to know what to ask, what to verify, and in what order.
 
