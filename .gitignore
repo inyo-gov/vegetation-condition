@@ -17,3 +17,5 @@ output/
 archive/
 trash/
 .DS_Store
+
+/.quarto/

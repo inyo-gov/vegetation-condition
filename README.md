@@ -10,7 +10,6 @@ The primary objectives of this report are:
 1. To provide a summary of the annual monitoring program.
 2. To flag groundwater-dependent vegetation parcels in wellfield areas with significant deviations from the 1984-87 vegetation baseline.
 3. To identify parcels that have been below baseline for five consecutive years.
-4. To corroborate significant trends using NDVI time series data.
 
 ## Data and Methods
 
@@ -99,7 +98,7 @@ The site is published from the **`docs/`** folder. In the repo **Settings → Pa
 - **Folder:** `/docs`  
 - **Save**
 
-The repo includes `docs/.nojekyll` so GitHub does not run Jekyll on the built site. After you push changes to `docs/` (e.g. after `quarto render`), the site updates automatically. If the live site still shows an old navbar, theme, or logo, try a hard refresh (Ctrl+Shift+R or Cmd+Shift+R) or clear the cache for the site.
+The repo includes `docs/.nojekyll` so GitHub does not run Jekyll on the built site. After you push changes to `docs/` (e.g. after `quarto render`), the site updates automatically.
 
 ## Getting Started
 
