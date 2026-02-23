@@ -114,7 +114,7 @@ No need to edit the Quarto files for a normal annual update—only `cYear` and t
 
 ## 4. Cloud database (MotherDuck / DuckDB) — source of truth
 
-To avoid copying the same datasets across repos, the plan is to push the **master line point**, **parcel attributes**, and **depth to water** (and any other canonical tables) to a cloud database (e.g. **MotherDuck**) and use **DuckDB** (or DuckLake) to catalog them. This repo would remain the place where new LPT and DTW data are added; after the targets run, a sync step would update the cloud DB. Other projects (dashboards, analyses) would then read from the cloud instead of local copies.
+To avoid copying the same datasets across repos, the plan is to push the **master line point**, **parcel attributes**, and **depth to water** (and any other canonical tables) to a cloud database (e.g. **MotherDuck**) and use **DuckDB** (or DuckLake) to catalog them. This repo would remain the place where new LPT and DTW data are added; after the targets run, a sync step would update the cloud DB. Other projects (dashboards, analyses) would then read from the cloud instead of local copies. This saves needing to update the data in the app bundle so there's no republishing step. 
 
 ### Intended setup
 
