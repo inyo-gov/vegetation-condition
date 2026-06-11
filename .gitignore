@@ -4,18 +4,28 @@
 .Ruserdata
 .Rproj.user
 *.Rproj
+.Renviron
+.env
 
 # Quarto
 .quarto/
+*.knit.md
+lpt_etl.knit.md
 
-# Targets & data
+# Targets & data (local binaries; not for git)
 _targets/
 data/
 output/
 
+# Generated reports & request deliverables
+*.pdf
+Parcel_TimeSeries_*.pdf
+data_requests/
+
 # Local / scratch
 archive/
 trash/
-.DS_Store
 
-/.quarto/
+# macOS
+.DS_Store
+**/.DS_Store

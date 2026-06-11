@@ -6576,7 +6576,7 @@ margin: 1rem 0;
   <li><a href="#ladwp-processing" id="toc-ladwp-processing" class="nav-link" data-scroll-target="#ladwp-processing"><span class="header-section-number">9</span> LADWP Processing</a></li>
   <li><a href="#combine-icwd-ladwp" id="toc-combine-icwd-ladwp" class="nav-link" data-scroll-target="#combine-icwd-ladwp"><span class="header-section-number">10</span> Combine ICWD + LADWP</a></li>
   <li><a href="#master-dataset-update" id="toc-master-dataset-update" class="nav-link" data-scroll-target="#master-dataset-update"><span class="header-section-number">11</span> Master Dataset Update</a></li>
-  <li><a href="#transect-lookup-base-vs-actual" id="toc-transect-lookup-base-vs-actual" class="nav-link" data-scroll-target="#transect-lookup-base-vs-actual"><span class="header-section-number">12</span> Transect Lookup (Base vs Actual)</a></li>
+  <li><a href="#transect-inventory" id="toc-transect-inventory" class="nav-link" data-scroll-target="#transect-inventory"><span class="header-section-number">12</span> Transect Inventory</a></li>
   <li><a href="#icwd-wide-export" id="toc-icwd-wide-export" class="nav-link" data-scroll-target="#icwd-wide-export"><span class="header-section-number">13</span> ICWD Wide Export</a></li>
   <li><a href="#transect-entity-metadata" id="toc-transect-entity-metadata" class="nav-link" data-scroll-target="#transect-entity-metadata"><span class="header-section-number">14</span> Transect Entity Metadata</a></li>
   <li><a href="#export-ladwp-long-format" id="toc-export-ladwp-long-format" class="nav-link" data-scroll-target="#export-ladwp-long-format"><span class="header-section-number">15</span> Export LADWP Long Format</a></li>
@@ -6636,7 +6636,7 @@ margin: 1rem 0;
 </section>
 <section id="core-transform-functions" class="level2" data-number="3">
 <h2 data-number="3" class="anchored" data-anchor-id="core-transform-functions"><span class="header-section-number">3</span> Core Transform Functions</h2>
-<p>These helper functions handle: (1) pivoting from wide transect layout to long format, (2) standardizing types, and (3) joining species attributes and plot IDs. Keeping them here ensures the transformation steps are transparent and reproducible.</p>
+<p>These helper functions handle: (1) pivoting from wide transect layout to long format, (2) standardizing types, and (3) joining species attributes and plot IDs. Transect IDs are kept as <strong>character</strong> — regular transects are <code>&quot;1&quot;</code>, <code>&quot;2&quot;</code>, etc. and suffixed transects retain their original label: <code>&quot;2_15&quot;</code>, <code>&quot;5_20&quot;</code>, <code>&quot;3_92&quot;</code>. The suffix indicates the year the transect was first added (2015, 2020, 1992).</p>
 </section>
 <section id="data-sources" class="level2" data-number="4">
 <h2 data-number="4" class="anchored" data-anchor-id="data-sources"><span class="header-section-number">4</span> Data Sources</h2>
@@ -6651,7 +6651,25 @@ margin: 1rem 0;
 [1] &quot;Loaded cached data from output/raw_sheets_data_2025.rds&quot;</code></pre>
 </div>
 <div class="cell-output cell-output-stdout">
-<pre><code>[1] &quot;Processing sheet: FSP004 from FSP&quot;
+<pre><code>[1] &quot;Processing sheet: BGP019 from BGP&quot;
+[1] &quot;Rows after filtering: 36&quot;
+[1] &quot;Processing sheet: BGP031 from BGP&quot;
+[1] &quot;Rows after filtering: 28&quot;
+[1] &quot;Processing sheet: BGP047 from BGP&quot;
+[1] &quot;Rows after filtering: 20&quot;
+[1] &quot;Processing sheet: BGP086 from BGP&quot;
+[1] &quot;Rows after filtering: 21&quot;
+[1] &quot;Processing sheet: BGP088 from BGP&quot;
+[1] &quot;Rows after filtering: 21&quot;
+[1] &quot;Processing sheet: BGP094 from BGP&quot;
+[1] &quot;Rows after filtering: 30&quot;
+[1] &quot;Processing sheet: BGP154 from BGP&quot;
+[1] &quot;Rows after filtering: 17&quot;
+[1] &quot;Processing sheet: BGP157 from BGP&quot;
+[1] &quot;Rows after filtering: 30&quot;
+[1] &quot;Processing sheet: BGP162 from BGP&quot;
+[1] &quot;Rows after filtering: 30&quot;
+[1] &quot;Processing sheet: FSP004 from FSP&quot;
 [1] &quot;Rows after filtering: 34&quot;
 [1] &quot;Processing sheet: FSP006 from FSP&quot;
 [1] &quot;Rows after filtering: 20&quot;
@@ -6963,8 +6981,8 @@ margin: 1rem 0;
 <p>Summarize how many transects were read per parcel for the current year to confirm sampling completeness.</p>
 <div class="cell">
 <div class="cell-output-display">
-<div class="datatables html-widget html-fill-item" id="htmlwidget-c5cbbb3e70a6e4dd3d50" style="width:100%;height:auto;"></div>
-<script type="application/json" data-for="htmlwidget-c5cbbb3e70a6e4dd3d50">{"x":{"filter":"none","vertical":false,"data":[["1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25","26","27","28","29","30","31","32","33","34","35","36","37","38","39","40","41","42","43","44","45","46","47","48","49","50","51","52","53","54","55","56","57","58","59","60","61","62","63","64","65","66","67","68","69","70","71","72","73","74","75","76","77","78","79","80","81","82","83","84","85","86","87","88","89","90","91","92","93","94","95","96","97","98","99","100","101","102","103","104","105","106","107","108","109","110","111","112","113","114","115","116","117","118","119","120","121","122","123","124","125","126","127","128","129","130","131","132","133","134","135","136","137"],["ABD012","BIS055","BIS060","BIS085","BLK002","BLK006","BLK008","BLK009","BLK011","BLK016","BLK021","BLK024","BLK033","BLK039","BLK044","BLK069","BLK074","BLK075","BLK077","BLK093","BLK094","BLK095","BLK096","BLK099","BLK115","BLK142","BLK143","FSL044","FSL048","FSL051","FSL053","FSL054","FSL064","FSL065","FSL116","FSL118","FSL120","FSL123","FSL124","FSL125","FSL126","FSL128","FSL129","FSL130","FSL138","FSL158","FSL161","FSL166","FSL172","FSL187","FSP004","FSP006","FSP015","FSP020","IND011","IND019","IND021","IND024","IND026","IND029","IND035","IND064","IND067","IND086","IND087","IND096","IND106","IND111","IND119","IND124","IND132","IND133","IND139","IND151","IND163","IND205","IND231","LAW030","LAW035","LAW043","LAW052","LAW062","LAW063","LAW065","LAW070","LAW072","LAW078","LAW082","LAW085","LAW105","LAW107","LAW108","LAW112","LAW120","LAW122","LAW137","LNP018","LNP019","LNP045","LNP050","LNP095","MAN006","MAN007","MAN014","MAN034","MAN037","MAN038","MAN042","MAN060","PLC007","PLC024","PLC028","PLC056","PLC059","PLC070","PLC072","PLC088","PLC092","PLC097","PLC106","PLC107","PLC121","PLC136","PLC137","PLC144","PLC220","PLC223","TIN006","TIN028","TIN030","TIN050","TIN053","TIN064","TIN068","UNW029","UNW031","UNW039"],[2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025],[6,4,4,6,9,6,9,7,5,8,5,7,4,5,5,7,7,5,4,8,8,5,3,8,8,8,3,3,10,4,4,9,8,6,7,5,9,4,4,1,1,4,5,5,5,6,4,4,4,6,8,4,7,8,6,6,7,9,8,5,5,4,9,9,6,6,7,6,4,5,5,4,12,7,10,4,4,4,4,4,5,4,4,5,2,7,4,4,6,7,5,9,6,4,6,10,6,7,6,9,9,6,11,5,6,7,12,8,6,9,4,9,7,8,6,6,8,7,5,5,4,7,7,8,7,7,7,7,8,12,7,8,4,7,5,8,11]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th> <\/th>\n      <th>Parcel<\/th>\n      <th>Year<\/th>\n      <th>Total_Transects<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"columnDefs":[{"className":"dt-right","targets":[2,3]},{"orderable":false,"targets":0},{"name":" ","targets":0},{"name":"Parcel","targets":1},{"name":"Year","targets":2},{"name":"Total_Transects","targets":3}],"order":[],"autoWidth":false,"orderClasses":false}},"evals":[],"jsHooks":[]}</script>
+<div class="datatables html-widget html-fill-item" id="htmlwidget-37392e70543be2a53ea7" style="width:100%;height:auto;"></div>
+<script type="application/json" data-for="htmlwidget-37392e70543be2a53ea7">{"x":{"filter":"none","vertical":false,"data":[["1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25","26","27","28","29","30","31","32","33","34","35","36","37","38","39","40","41","42","43","44","45","46","47","48","49","50","51","52","53","54","55","56","57","58","59","60","61","62","63","64","65","66","67","68","69","70","71","72","73","74","75","76","77","78","79","80","81","82","83","84","85","86","87","88","89","90","91","92","93","94","95","96","97","98","99","100","101","102","103","104","105","106","107","108","109","110","111","112","113","114","115","116","117","118","119","120","121","122","123","124","125","126","127","128","129","130","131","132","133","134","135","136","137","138","139","140","141","142","143","144"],["ABD012","BGP031","BGP047","BGP088","BGP094","BGP154","BGP157","BGP162","BIS055","BIS060","BIS085","BLK002","BLK006","BLK008","BLK009","BLK011","BLK016","BLK021","BLK024","BLK033","BLK039","BLK044","BLK069","BLK074","BLK075","BLK077","BLK093","BLK094","BLK095","BLK096","BLK099","BLK115","BLK142","BLK143","FSL044","FSL048","FSL051","FSL053","FSL054","FSL064","FSL065","FSL116","FSL118","FSL120","FSL123","FSL124","FSL125","FSL126","FSL128","FSL129","FSL130","FSL138","FSL158","FSL161","FSL166","FSL172","FSL187","FSP004","FSP006","FSP015","FSP020","IND011","IND019","IND021","IND024","IND026","IND029","IND035","IND064","IND067","IND086","IND087","IND096","IND106","IND111","IND119","IND124","IND132","IND133","IND139","IND151","IND163","IND205","IND231","LAW030","LAW035","LAW043","LAW052","LAW062","LAW063","LAW065","LAW070","LAW072","LAW078","LAW082","LAW085","LAW105","LAW107","LAW108","LAW112","LAW120","LAW122","LAW137","LNP018","LNP019","LNP045","LNP050","LNP095","MAN006","MAN007","MAN014","MAN034","MAN037","MAN038","MAN042","MAN060","PLC007","PLC024","PLC028","PLC056","PLC059","PLC070","PLC072","PLC088","PLC092","PLC097","PLC106","PLC107","PLC121","PLC136","PLC137","PLC144","PLC220","PLC223","TIN006","TIN028","TIN030","TIN050","TIN053","TIN064","TIN068","UNW029","UNW031","UNW039"],[2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025],[6,7,7,4,5,6,7,8,4,4,6,9,6,9,7,5,8,5,7,4,5,5,7,7,5,4,8,8,5,3,8,8,8,3,3,10,4,4,9,8,6,7,5,9,4,4,1,1,4,5,5,5,6,4,4,4,6,8,4,7,8,6,6,7,9,8,5,5,4,9,9,6,6,7,6,4,5,5,4,12,7,10,4,4,4,4,4,5,4,4,5,2,7,4,4,6,7,5,9,6,4,6,10,6,7,6,9,9,6,11,5,6,7,12,8,6,9,4,9,7,8,6,6,8,7,5,5,4,7,7,8,7,7,7,7,8,12,7,8,4,7,5,8,11]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th> <\/th>\n      <th>Parcel<\/th>\n      <th>Year<\/th>\n      <th>Total_Transects<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"columnDefs":[{"className":"dt-right","targets":[2,3]},{"orderable":false,"targets":0},{"name":" ","targets":0},{"name":"Parcel","targets":1},{"name":"Year","targets":2},{"name":"Total_Transects","targets":3}],"order":[],"autoWidth":false,"orderClasses":false}},"evals":[],"jsHooks":[]}</script>
 </div>
 </div>
 </section>
@@ -6973,7 +6991,7 @@ margin: 1rem 0;
 <p>Save the ICWD long‑format data for downstream joins and QA/QC.</p>
 <div class="cell">
 <div class="cell-output cell-output-stdout">
-<pre><code>[1] &quot;Data saved to output/icwd_data2025.csv&quot;</code></pre>
+<pre><code>[1] &quot;Data saved to output/icwd_data2025_v2.csv (suffixed transects as 400/500/600-series IDs)&quot;</code></pre>
 </div>
 </div>
 </section>
@@ -7019,10 +7037,10 @@ margin: 1rem 0;
 <pre><code>[1] &quot;Combined 2025 data summary:&quot;</code></pre>
 </div>
 <div class="cell-output cell-output-stdout">
-<pre><code>[1] &quot;Total rows: 14542&quot;</code></pre>
+<pre><code>[1] &quot;Total rows: 15034&quot;</code></pre>
 </div>
 <div class="cell-output cell-output-stdout">
-<pre><code>[1] &quot;ICWD rows: 10495&quot;</code></pre>
+<pre><code>[1] &quot;ICWD rows: 10987&quot;</code></pre>
 </div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] &quot;LADWP rows: 4047&quot;</code></pre>
@@ -7031,13 +7049,13 @@ margin: 1rem 0;
 <pre><code>[1] &quot;Unique parcels: 161&quot;</code></pre>
 </div>
 <div class="cell-output cell-output-stdout">
-<pre><code>[1] &quot;Unique parcels ICWD: 137&quot;</code></pre>
+<pre><code>[1] &quot;Unique parcels ICWD: 144&quot;</code></pre>
 </div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] &quot;Unique parcels LADWP: 161&quot;</code></pre>
 </div>
 <div class="cell-output cell-output-stdout">
-<pre><code>[1] &quot;Combined data saved to output/ICWD_LADWP_merged_lpt_2025.csv&quot;</code></pre>
+<pre><code>[1] &quot;Combined data (v2) saved to output/ICWD_LADWP_merged_lpt_2025_v2.csv&quot;</code></pre>
 </div>
 </div>
 </section>
@@ -7047,45 +7065,39 @@ margin: 1rem 0;
 <div class="cell">
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] &quot;Loaded previous master dataset: 451223 rows&quot;
-[1] &quot;Master 2025 dataset: 465765 rows&quot;
+[1] &quot;Master 2025 dataset: 466257 rows&quot;
 [1] &quot;Years in master: 1985, 1986, 1987, 1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025&quot;
-[1] &quot;Master dataset saved to output/lpt_MASTER_2025.csv&quot;</code></pre>
+[1] &quot;Master dataset (v2) saved to output/lpt_MASTER_2025_v2.csv&quot;</code></pre>
 </div>
 </div>
 </section>
-<section id="transect-lookup-base-vs-actual" class="level2" data-number="12">
-<h2 data-number="12" class="anchored" data-anchor-id="transect-lookup-base-vs-actual"><span class="header-section-number">12</span> Transect Lookup (Base vs Actual)</h2>
-<p>Create a lookup that maps base transects (e.g., T2) to actual transect IDs (e.g., T2_15) for traceability.</p>
+<section id="transect-inventory" class="level2" data-number="12">
+<h2 data-number="12" class="anchored" data-anchor-id="transect-inventory"><span class="header-section-number">12</span> Transect Inventory</h2>
+<p>Summary of all transect IDs per parcel. Suffixed transects (e.g. <code>2_15</code>, <code>3_92</code>) are kept as-is — the suffix indicates the year the transect was first added.</p>
 <div class="cell">
 <div class="cell-output cell-output-stdout">
-<pre><code>[1] &quot;Transect lookup table saved to output/transect_lookup_2025.csv&quot;</code></pre>
+<pre><code>[1] &quot;Transect inventory: 897 rows&quot;</code></pre>
 </div>
 <div class="cell-output cell-output-stdout">
-<pre><code>[1] &quot;Lookup table dimensions: 853 rows&quot;</code></pre>
+<pre><code>[1] &quot;Suffixed transects: 49 across 18 parcels&quot;</code></pre>
 </div>
-<div class="cell-output cell-output-stdout">
-<pre><code>[1] &quot;Sample of lookup table:&quot;</code></pre>
-</div>
-<div class="cell-output cell-output-stdout">
-<pre><code># A tibble: 10 × 4
-   Parcel Base_Transect Actual_Transect  Year
-   &lt;chr&gt;  &lt;chr&gt;         &lt;chr&gt;           &lt;dbl&gt;
- 1 ABD012 10            10               2025
- 2 ABD012 12            12               2025
- 3 ABD012 2             2                2025
- 4 ABD012 4             4                2025
- 5 ABD012 6             6                2025
- 6 ABD012 8             8                2025
- 7 BIS055 2             2                2025
- 8 BIS055 4             4                2025
- 9 BIS055 6             6                2025
-10 BIS055 8             8                2025</code></pre>
+<div class="cell-output-display">
+<div class="datatables html-widget html-fill-item" id="htmlwidget-e1d1e3b6e7624908b7bf" style="width:100%;height:auto;"></div>
+<script type="application/json" data-for="htmlwidget-e1d1e3b6e7624908b7bf">{"x":{"filter":"none","vertical":false,"caption":"<caption>Suffixed transects in 2025 data<\/caption>","data":[["1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25","26","27","28","29","30","31","32","33","34","35","36","37","38","39","40","41","42","43","44","45","46","47","48","49"],["BLK044","BLK044","FSP006","IND029","IND029","IND124","IND124","IND124","LAW052","LAW052","LAW052","LAW065","LAW065","LAW065","LAW085","LAW085","LAW085","LAW085","LAW107","LAW107","LAW107","LAW112","LAW112","LAW112","LAW112","LNP045","LNP045","LNP045","MAN014","MAN014","MAN034","MAN034","MAN034","MAN060","MAN060","MAN060","MAN060","PLC097","PLC097","PLC106","PLC106","PLC107","PLC107","TIN068","TIN068","TIN068","UNW029","UNW029","UNW029"],["7_15","8_15","13_15","1_15","4_15","6_20","7_20","8_20","14_15","5_15","9_15","1_15","5_15","8_15","14_15","2_15","4_15","7_15","2_15","5_15","8_15","11_15","15_15","2_15","8_15","13_15","5_15","8_15","13_15","2_15","11_92","3_92","6_92","13_15","2_15","6_15","9_15","13_15","6_15","11_15","2_15","5_20","6_20","15_15","19_15","1_15","10_15","13_15","3_15"],[2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025,2025],[true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th> <\/th>\n      <th>Parcel<\/th>\n      <th>Transect<\/th>\n      <th>Year<\/th>\n      <th>is_suffixed<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"columnDefs":[{"className":"dt-right","targets":3},{"orderable":false,"targets":0},{"name":" ","targets":0},{"name":"Parcel","targets":1},{"name":"Transect","targets":2},{"name":"Year","targets":3},{"name":"is_suffixed","targets":4}],"order":[],"autoWidth":false,"orderClasses":false}},"evals":[],"jsHooks":[]}</script>
 </div>
 </div>
 </section>
 <section id="icwd-wide-export" class="level2" data-number="13">
 <h2 data-number="13" class="anchored" data-anchor-id="icwd-wide-export"><span class="header-section-number">13</span> ICWD Wide Export</h2>
-<p>Pivot ICWD data back to a wide transect format for compatibility with legacy workflows.</p>
+<p>Pivot ICWD data back to a wide transect format. Suffixed transects (e.g. <code>T2_15</code>) are distinct columns, never collapsed into the base transect.</p>
+<div class="cell">
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] &quot;Wide format (v2, suffixed transects separated) saved to output/icwd_data2025_wide_v2.csv&quot;</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] &quot;Production ICWD wide input saved to data/lpt_ICWD_2025.csv&quot;</code></pre>
+</div>
+</div>
 </section>
 <section id="transect-entity-metadata" class="level2" data-number="14">
 <h2 data-number="14" class="anchored" data-anchor-id="transect-entity-metadata"><span class="header-section-number">14</span> Transect Entity Metadata</h2>
@@ -7095,7 +7107,7 @@ margin: 1rem 0;
 <pre><code>[1] &quot;Transect-Entity Metadata Summary:&quot;</code></pre>
 </div>
 <div class="cell-output cell-output-stdout">
-<pre><code>[1] &quot;Total unique Parcel-Transect combinations: 1763&quot;</code></pre>
+<pre><code>[1] &quot;Total unique Parcel-Transect combinations: 1807&quot;</code></pre>
 </div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] &quot;Parcels with data: 161&quot;</code></pre>
@@ -7130,7 +7142,7 @@ margin: 1rem 0;
 <p>Create a wide‑format LADWP file consistent with the ICWD export.</p>
 <div class="cell">
 <div class="cell-output cell-output-stdout">
-<pre><code>[1] &quot;LADWP wide format data saved to output/ladwp_data2025_wide.csv&quot;</code></pre>
+<pre><code>[1] &quot;LADWP wide format (v2) saved to output/ladwp_data2025_wide_v2.csv&quot;</code></pre>
 </div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] &quot;LADWP wide format dimensions: 1627 rows, 20 columns&quot;</code></pre>
@@ -7139,50 +7151,13 @@ margin: 1rem 0;
 </section>
 <section id="combined-wide-export" class="level2" data-number="17">
 <h2 data-number="17" class="anchored" data-anchor-id="combined-wide-export"><span class="header-section-number">17</span> Combined Wide Export</h2>
-<p>Generate a combined ICWD+LADWP wide‑format file for the full 2025 dataset.</p>
+<p>Generate a combined ICWD+LADWP wide‑format file for the full 2025 dataset. Suffixed transects appear as 400/500/600-series columns (e.g. T402 for T2_15).</p>
 <div class="cell">
 <div class="cell-output cell-output-stdout">
-<pre><code>[1] &quot;Combined ICWD+LADWP wide format data saved to output/ICWD_LADWP_merged_2025_wide.csv&quot;</code></pre>
+<pre><code>[1] &quot;Combined ICWD+LADWP wide format (v2) saved to output/ICWD_LADWP_merged_2025_wide_v2.csv&quot;</code></pre>
 </div>
 <div class="cell-output cell-output-stdout">
-<pre><code>[1] &quot;Combined wide format dimensions: 2419 rows, 26 columns&quot;</code></pre>
-</div>
-<div class="cell-output cell-output-stdout">
-<pre><code>[1] &quot;Preview of combined wide format:&quot;</code></pre>
-</div>
-<div class="cell-output cell-output-stdout">
-<pre><code># A tibble: 5 × 26
-  Parcel SPECIES T1    T2    T3    T4    T5    T6    T7    T8    T9    T10  
-  &lt;chr&gt;  &lt;chr&gt;   &lt;chr&gt; &lt;chr&gt; &lt;chr&gt; &lt;chr&gt; &lt;chr&gt; &lt;chr&gt; &lt;chr&gt; &lt;chr&gt; &lt;chr&gt; &lt;chr&gt;
-1 ABD012 ACHY    &quot;&quot;    &quot;&quot;    &quot;&quot;    &quot;&quot;    &quot;1&quot;   &quot;&quot;    &quot;&quot;    &quot;&quot;    &quot;&quot;    &quot;&quot;   
-2 ABD012 ARTR2   &quot;15&quot;  &quot;&quot;    &quot;10&quot;  &quot;&quot;    &quot;7&quot;   &quot;&quot;    &quot;13&quot;  &quot;&quot;    &quot;17&quot;  &quot;&quot;   
-3 ABD012 ARTRT   &quot;&quot;    &quot;6&quot;   &quot;&quot;    &quot;17&quot;  &quot;&quot;    &quot;8&quot;   &quot;&quot;    &quot;15&quot;  &quot;&quot;    &quot;2&quot;  
-4 ABD012 ATCA2   &quot;4&quot;   &quot;5&quot;   &quot;&quot;    &quot;0&quot;   &quot;&quot;    &quot;3&quot;   &quot;8&quot;   &quot;0&quot;   &quot;5&quot;   &quot;1&quot;  
-5 ABD012 ERBR7   &quot;&quot;    &quot;1&quot;   &quot;&quot;    &quot;0&quot;   &quot;&quot;    &quot;0&quot;   &quot;&quot;    &quot;0&quot;   &quot;&quot;    &quot;2&quot;  
-# ℹ 14 more variables: T11 &lt;chr&gt;, T12 &lt;chr&gt;, T13 &lt;chr&gt;, T14 &lt;chr&gt;, T15 &lt;chr&gt;,
-#   T16 &lt;chr&gt;, T17 &lt;chr&gt;, T18 &lt;chr&gt;, T19 &lt;chr&gt;, T20 &lt;chr&gt;, T21 &lt;chr&gt;,
-#   T22 &lt;chr&gt;, T23 &lt;chr&gt;, T24 &lt;chr&gt;</code></pre>
-</div>
-<div class="cell-output cell-output-stdout">
-<pre><code>[1] &quot;Wide format data saved to output/icwd_data2025_wide.csv&quot;</code></pre>
-</div>
-<div class="cell-output cell-output-stdout">
-<pre><code>[1] &quot;Wide format dimensions: 1582 rows, 23 columns&quot;</code></pre>
-</div>
-<div class="cell-output cell-output-stdout">
-<pre><code>[1] &quot;Preview of wide format:&quot;</code></pre>
-</div>
-<div class="cell-output cell-output-stdout">
-<pre><code># A tibble: 5 × 23
-  Parcel SPECIES    T1    T2    T3    T4    T5    T6    T7    T8    T9   T10
-  &lt;chr&gt;  &lt;chr&gt;   &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;
-1 ABD012 ARTRT      NA     6    NA    17    NA     8    NA    15    NA     2
-2 ABD012 ATCA2      NA     5    NA     0    NA     3    NA     0    NA     1
-3 ABD012 ERBR7      NA     1    NA     0    NA     0    NA     0    NA     2
-4 ABD012 ERNA10     NA     4    NA     6    NA     5    NA    11    NA    19
-5 ABD012 PSPO       NA     1    NA     1    NA     0    NA     0    NA     1
-# ℹ 11 more variables: T11 &lt;dbl&gt;, T12 &lt;dbl&gt;, T13 &lt;dbl&gt;, T14 &lt;dbl&gt;, T15 &lt;dbl&gt;,
-#   T16 &lt;dbl&gt;, T18 &lt;dbl&gt;, T19 &lt;dbl&gt;, T20 &lt;dbl&gt;, T22 &lt;dbl&gt;, T24 &lt;dbl&gt;</code></pre>
+<pre><code>[1] &quot;Combined wide format dimensions: 2454 rows, 48 columns&quot;</code></pre>
 </div>
 </div>
 </section>

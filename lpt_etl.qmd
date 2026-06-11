@@ -60,16 +60,29 @@ species_data <- read.csv("data/species.csv")
 
 ## Core Transform Functions
 
-These helper functions handle: (1) pivoting from wide transect layout to long format, (2) standardizing types, and (3) joining species attributes and plot IDs. Keeping them here ensures the transformation steps are transparent and reproducible.
+These helper functions handle: (1) pivoting from wide transect layout to long format, (2) standardizing types, and (3) joining species attributes and plot IDs. Transect IDs are kept as **character** — regular transects are `"1"`, `"2"`, etc. and suffixed transects retain their original label: `"2_15"`, `"5_20"`, `"3_92"`. The suffix indicates the year the transect was first added (2015, 2020, 1992).
 
 ```{r}
-# Function to pivot and clean the data from Google Sheets
+# Quad sheets may repeat the species grid below summary rows (QUAD / SPECIES header).
+truncate_quad_sheet_repeat_block <- function(df, quad_nm = "QUAD", species_nm = "SPECIES") {
+  if (!(quad_nm %in% names(df)) || !(species_nm %in% names(df))) return(df)
+  q <- toupper(trimws(as.character(df[[quad_nm]])))
+  s <- toupper(trimws(as.character(df[[species_nm]])))
+  hdr <- !is.na(q) & !is.na(s) & q == "QUAD" & s == "SPECIES"
+  w <- which(hdr)
+  if (length(w)) df <- df[seq_len(w[[1L]] - 1L), , drop = FALSE]
+  df
+}
+
+species_is_numeric_placeholder <- function(species_vals) {
+  x <- trimws(as.character(species_vals))
+  nzchar(x) & grepl("^-?[0-9]+(?:\\.[0-9]+)?$", x)
+}
+
 pivot_longer_icwd <- function(icwd_wide) {
-  # Ensure all columns starting with 'T' are numeric or NA
   icwd_wide <- icwd_wide %>%
     mutate(across(starts_with("T"), ~ {
       if (is.list(.)) {
-        # Attempt to convert list elements to numeric, replacing with NA if it fails
         sapply(., function(x) {
           if (length(x) == 1 && is.numeric(x)) {
             return(as.numeric(x))
@@ -82,27 +95,22 @@ pivot_longer_icwd <- function(icwd_wide) {
       }
     }))
   
-  # Identify columns that have been measured (i.e., have non-NA values)
   measured_columns <- icwd_wide %>%
     select(starts_with("T")) %>%
     select(where(~ any(!is.na(.))))
   
-  # If no measured columns exist, return an empty dataframe
   if (ncol(measured_columns) == 0) {
     return(tibble(Parcel = character(), Transect = character(), Code = character(), Cover = numeric()))
   }
   
-  # Pivot only the measured transect columns
   icwd_wide %>%
     pivot_longer(cols = all_of(names(measured_columns)),
                  names_to = "Transect",
                  values_to = "Cover",
                  names_prefix = "T") %>%
     filter(!is.na(Cover)) %>%
-    mutate(
-      Transect = as.character(Transect)  # Keep Transect as character type
-    ) %>%
-    rename(Code = SPECIES)  # Rename SPECIES to Code
+    mutate(Transect = as.character(Transect)) %>%
+    rename(Code = SPECIES)
 }
 ```
 
@@ -140,8 +148,9 @@ READ_FROM_SHEETS <- FALSE
 
 # Define the Google Sheets URLs for 2025
 sheets_urls <- list(
-  FSP = "https://docs.google.com/spreadsheets/d/175miDyfxj960js8X2k_cKX-hZOzVGNXDWeOFJcEzzTo/edit#gid=0",
-  FSL = "https://docs.google.com/spreadsheets/d/14sXTXykFgRPTERmh9C9GVR5DtPVVx2YLgDKvdCBXtIk/edit#gid=0",
+  BGP = "https://docs.google.com/spreadsheets/d/1SHMp9g1L2BrGxIK-D6QaJXrzH6iT1iEU1MxtIWsXfqQ/edit?gid=0",
+  FSP = "https://docs.google.com/spreadsheets/d/175miDyfxj960js8X2k_cKX-hZOzVGNXDWeOFJcEzzTo/edit?gid=0",
+  FSL = "https://docs.google.com/spreadsheets/d/14sXTXykFgRPTERmh9C9GVR5DtPVVx2YLgDKvdCBXtIk/edit?gid=0",
   BLK = "https://docs.google.com/spreadsheets/d/1iuDMhaL5aw_s3wyKj7v60cStu4MpfwgbVRuFhbw6k_E/edit?gid=0",
   IND = "https://docs.google.com/spreadsheets/d/1Hsp0kbB9L85uIVeA21-adBk0xUKnGI441YMBw1huTEM/edit?gid=0",
   MAN = "https://docs.google.com/spreadsheets/d/1sUyBczaBpZKsmLOlcgIufA0ibvWATaOC77y55c_qXxA/edit?gid=0",
@@ -227,8 +236,10 @@ for (item in raw_sheets_data) {
   # Proceed with filtering and processing only if there are rows
   if (nrow(data) > 0) {
     cleaned_data <- data %>%
+      truncate_quad_sheet_repeat_block() %>%
       filter(!grepl("LIVE COVER|LIVE ACRES|STANDARD DEV|COEF OF VAR|ACCURACY|PRN|LIVE,STD,CV,Acc", QUAD, ignore.case = TRUE)) %>%
-      select(SPECIES, starts_with("T"), -contains("TOTAL"))  # Select only the relevant columns for species and transects
+      select(SPECIES, starts_with("T"), -contains("TOTAL")) %>%
+      filter(!species_is_numeric_placeholder(SPECIES))
     
     print(paste("Rows after filtering:", nrow(cleaned_data)))
     
@@ -321,9 +332,9 @@ datatable(transects_summary)
 Save the ICWD long‑format data for downstream joins and QA/QC.
 
 ```{r}
-# Save the processed data to CSV (long format)
-write.csv(final_data, "output/icwd_data2025.csv", row.names = FALSE)
-print("Data saved to output/icwd_data2025.csv")
+# Save the processed data to CSV (long format) — v2 with 400-series transect IDs
+write.csv(final_data, "output/icwd_data2025_v2.csv", row.names = FALSE)
+print("Data saved to output/icwd_data2025_v2.csv (suffixed transects as 400/500/600-series IDs)")
 ```
 
 ## LADWP Processing
@@ -350,7 +361,7 @@ ladwp_long <- ladwp_raw %>%
     Cover = as.numeric(Cover)
   ) %>%
   select(Parcel, Transect, Code, Cover) %>%
-  filter(!is.na(Cover))  # Remove rows with NA cover
+  filter(!is.na(Cover))
 
 # Fix species code mismatches (same as ICWD)
 ladwp_long <- ladwp_long %>%
@@ -393,7 +404,9 @@ print(paste("LADWP processed rows:", nrow(ladwp_processed)))
 Bind the two entity datasets into a combined 2025 dataset and export a merged long‑format file.
 
 ```{r}
-# Combine ICWD and LADWP data
+final_data <- final_data %>% mutate(Transect = as.character(Transect))
+ladwp_processed <- ladwp_processed %>% mutate(Transect = as.character(Transect))
+
 combined_2025_data <- bind_rows(final_data, ladwp_processed) %>%
   arrange(Parcel, Transect, Code)
 
@@ -405,9 +418,8 @@ print(paste("Unique parcels:", length(unique(combined_2025_data$Parcel))))
 print(paste("Unique parcels ICWD:", length(unique(final_data$Parcel))))
 print(paste("Unique parcels LADWP:", length(unique(ladwp_processed$Parcel))))
 
-# Save combined data
-write.csv(combined_2025_data, "output/ICWD_LADWP_merged_lpt_2025.csv", row.names = FALSE)
-print("Combined data saved to output/ICWD_LADWP_merged_lpt_2025.csv")
+write.csv(combined_2025_data, "output/ICWD_LADWP_merged_lpt_2025_v2.csv", row.names = FALSE)
+print("Combined data (v2) saved to output/ICWD_LADWP_merged_lpt_2025_v2.csv")
 ```
 
 ## Master Dataset Update
@@ -423,76 +435,63 @@ if (file.exists(prev_master_file)) {
   prev_master <- read.csv(prev_master_file)
   print(paste("Loaded previous master dataset:", nrow(prev_master), "rows"))
   
-  # Ensure Transect is character in both datasets for compatibility
-  prev_master <- prev_master %>%
-    mutate(Transect = as.character(Transect))
-  combined_2025_data <- combined_2025_data %>%
-    mutate(Transect = as.character(Transect))
+  prev_master <- prev_master %>% mutate(Transect = as.character(Transect))
+  combined_2025_data <- combined_2025_data %>% mutate(Transect = as.character(Transect))
   
-  # Combine previous master with 2025 data
   master_2025 <- bind_rows(prev_master, combined_2025_data) %>%
     arrange(Parcel, Year, Transect, Code)
   
   print(paste("Master 2025 dataset:", nrow(master_2025), "rows"))
   print(paste("Years in master:", paste(sort(unique(master_2025$Year)), collapse = ", ")))
   
-  # Save master dataset
-  write.csv(master_2025, "output/lpt_MASTER_2025.csv", row.names = FALSE)
-  print("Master dataset saved to output/lpt_MASTER_2025.csv")
+  write.csv(master_2025, "output/lpt_MASTER_2025_v2.csv", row.names = FALSE)
+  print("Master dataset (v2) saved to output/lpt_MASTER_2025_v2.csv")
 } else {
   print("Previous master dataset not found. Creating new master from 2025 data only.")
-  write.csv(combined_2025_data, "output/lpt_MASTER_2025.csv", row.names = FALSE)
-  print("Master dataset saved to output/lpt_MASTER_2025.csv")
+  write.csv(combined_2025_data, "output/lpt_MASTER_2025_v2.csv", row.names = FALSE)
+  print("Master dataset (v2) saved to output/lpt_MASTER_2025_v2.csv")
 }
 ```
 
-## Transect Lookup (Base vs Actual)
+## Transect Inventory
 
-Create a lookup that maps base transects (e.g., T2) to actual transect IDs (e.g., T2_15) for traceability.
+Summary of all transect IDs per parcel. Suffixed transects (e.g. `2_15`, `3_92`) are kept as-is — the suffix indicates the year the transect was first added.
 
 ```{r}
-# Create lookup table: track which transect variants were used for each base transect
-# This records Parcel, Base_Transect (e.g., T2), Actual_Transect (e.g., T2_15), Year
-transect_lookup <- final_data %>%
+transect_inventory <- final_data %>%
   select(Parcel, Transect, Year) %>%
   distinct() %>%
-  mutate(
-    Base_Transect = gsub("_.*", "", Transect),  # Extract base number (e.g., "2" from "2_15")
-    Actual_Transect = Transect  # Keep the actual transect identifier
-  ) %>%
-  select(Parcel, Base_Transect, Actual_Transect, Year) %>%
-  arrange(Parcel, Base_Transect, Actual_Transect)
+  mutate(is_suffixed = grepl("_", Transect)) %>%
+  arrange(Parcel, Transect)
 
-# Save lookup table
-write.csv(transect_lookup, "output/transect_lookup_2025.csv", row.names = FALSE)
-print("Transect lookup table saved to output/transect_lookup_2025.csv")
-print(paste("Lookup table dimensions:", nrow(transect_lookup), "rows"))
-print("Sample of lookup table:")
-print(head(transect_lookup, 10))
+write.csv(transect_inventory, "output/transect_inventory_2025.csv", row.names = FALSE)
+print(paste("Transect inventory:", nrow(transect_inventory), "rows"))
+
+suffixed_only <- transect_inventory %>% filter(is_suffixed)
+print(paste("Suffixed transects:", nrow(suffixed_only), "across", n_distinct(suffixed_only$Parcel), "parcels"))
+datatable(suffixed_only, caption = "Suffixed transects in 2025 data")
 ```
 
 ## ICWD Wide Export
 
-Pivot ICWD data back to a wide transect format for compatibility with legacy workflows.
+Pivot ICWD data back to a wide transect format. Suffixed transects (e.g. `T2_15`) are distinct columns, never collapsed into the base transect.
 
 ```{r}
-# Export wide format CSV (similar to input format with Parcel column)
-# Combine transects with same base number (e.g., T2 and T2_15 -> T2)
+sort_transect_cols <- function(tcols) {
+  # Sort T-prefixed columns: plain numerics first (T1, T2, ...), then suffixed (T1_15, T2_15, ...)
+  stripped <- gsub("^T", "", tcols)
+  is_plain <- !grepl("_", stripped)
+  plain <- tcols[is_plain]
+  suffixed <- tcols[!is_plain]
+  plain_sorted <- plain[order(as.numeric(gsub("^T", "", plain)))]
+  suffixed_sorted <- suffixed[order(suffixed)]
+  c(plain_sorted, suffixed_sorted)
+}
 
-# First, add base transect identifier
-final_data_with_base <- final_data %>%
+wide_format_v2 <- final_data %>%
   select(Parcel, Transect, Code, Cover) %>%
-  mutate(Transect_base = gsub("_.*", "", Transect))  # Extract base number
-
-# Combine transects with same base by summing Cover values
-# Group by Parcel, Code, and base transect, then sum
-combined_data <- final_data_with_base %>%
-  group_by(Parcel, Code, Transect_base) %>%
-  summarize(Cover = sum(Cover, na.rm = TRUE), .groups = 'drop') %>%
-  rename(Transect = Transect_base)
-
-# Now pivot to wide format
-wide_format <- combined_data %>%
+  group_by(Parcel, Code, Transect) %>%
+  summarize(Cover = sum(Cover, na.rm = TRUE), .groups = "drop") %>%
   pivot_wider(
     id_cols = c(Parcel, Code),
     names_from = Transect,
@@ -501,24 +500,23 @@ wide_format <- combined_data %>%
     values_fill = NA
   ) %>%
   rename(SPECIES = Code) %>%
-  # Arrange by Parcel, then SPECIES
   arrange(Parcel, SPECIES)
 
-# Extract T column names and sort them numerically (T1, T2, T3, ..., T9, T10, T11, ...)
-t_columns <- names(wide_format)[grepl("^T", names(wide_format))]
-# Extract numeric part and sort
-t_columns_sorted <- t_columns[order(as.numeric(gsub("^T", "", t_columns)))]
+t_columns <- names(wide_format_v2)[grepl("^T", names(wide_format_v2))]
+wide_format_v2 <- wide_format_v2 %>%
+  select(Parcel, SPECIES, all_of(sort_transect_cols(t_columns)))
 
-# Reorder columns: Parcel, SPECIES, then T columns in numeric order
-wide_format <- wide_format %>%
-  select(Parcel, SPECIES, all_of(t_columns_sorted))
-
-# Replace NA values with empty strings for CSV output
-wide_format_output <- wide_format %>%
+wide_format_output_v2 <- wide_format_v2 %>%
   mutate(across(starts_with("T"), ~ ifelse(is.na(.), "", .)))
 
-# Save ICWD-only wide format to CSV (with blank cells instead of NA)
-write.csv(wide_format_output, "output/icwd_data2025_wide.csv", row.names = FALSE, na = "")
+write.csv(wide_format_output_v2, "output/icwd_data2025_wide_v2.csv", row.names = FALSE, na = "")
+print("Wide format (v2, suffixed transects separated) saved to output/icwd_data2025_wide_v2.csv")
+
+# Production wide input for targets (Code column, resampled transects as separate T* columns)
+icwd_wide_production <- wide_format_output_v2 %>%
+  rename(Code = SPECIES)
+write.csv(icwd_wide_production, "data/lpt_ICWD_2025.csv", row.names = FALSE, na = "")
+print("Production ICWD wide input saved to data/lpt_ICWD_2025.csv")
 ```
 
 ## Transect Entity Metadata
@@ -582,19 +580,10 @@ Create a wide‑format LADWP file consistent with the ICWD export.
 
 ```{r}
 # Export LADWP-only wide format CSV (similar to ICWD)
-# Combine transects with same base number
-ladwp_with_base <- ladwp_processed %>%
+ladwp_wide_format_v2 <- ladwp_processed %>%
   select(Parcel, Transect, Code, Cover) %>%
-  mutate(Transect_base = gsub("_.*", "", Transect))
-
-# Combine transects with same base by summing Cover values
-ladwp_combined <- ladwp_with_base %>%
-  group_by(Parcel, Code, Transect_base) %>%
-  summarize(Cover = sum(Cover, na.rm = TRUE), .groups = 'drop') %>%
-  rename(Transect = Transect_base)
-
-# Pivot to wide format
-ladwp_wide_format <- ladwp_combined %>%
+  group_by(Parcel, Code, Transect) %>%
+  summarize(Cover = sum(Cover, na.rm = TRUE), .groups = "drop") %>%
   pivot_wider(
     id_cols = c(Parcel, Code),
     names_from = Transect,
@@ -605,44 +594,27 @@ ladwp_wide_format <- ladwp_combined %>%
   rename(SPECIES = Code) %>%
   arrange(Parcel, SPECIES)
 
-# Extract T column names and sort numerically
-ladwp_t_columns <- names(ladwp_wide_format)[grepl("^T", names(ladwp_wide_format))]
-ladwp_t_columns_sorted <- ladwp_t_columns[order(as.numeric(gsub("^T", "", ladwp_t_columns)))]
+ladwp_t_columns <- names(ladwp_wide_format_v2)[grepl("^T", names(ladwp_wide_format_v2))]
+ladwp_wide_format_v2 <- ladwp_wide_format_v2 %>%
+  select(Parcel, SPECIES, all_of(sort_transect_cols(ladwp_t_columns)))
 
-# Reorder columns
-ladwp_wide_format <- ladwp_wide_format %>%
-  select(Parcel, SPECIES, all_of(ladwp_t_columns_sorted))
-
-# Replace NA values with empty strings
-ladwp_wide_format_output <- ladwp_wide_format %>%
+ladwp_wide_format_output_v2 <- ladwp_wide_format_v2 %>%
   mutate(across(starts_with("T"), ~ ifelse(is.na(.), "", .)))
 
-# Save LADWP-only wide format
-write.csv(ladwp_wide_format_output, "output/ladwp_data2025_wide.csv", row.names = FALSE, na = "")
-print("LADWP wide format data saved to output/ladwp_data2025_wide.csv")
-print(paste("LADWP wide format dimensions:", nrow(ladwp_wide_format_output), "rows,", ncol(ladwp_wide_format_output), "columns"))
+write.csv(ladwp_wide_format_output_v2, "output/ladwp_data2025_wide_v2.csv", row.names = FALSE, na = "")
+print("LADWP wide format (v2) saved to output/ladwp_data2025_wide_v2.csv")
+print(paste("LADWP wide format dimensions:", nrow(ladwp_wide_format_output_v2), "rows,", ncol(ladwp_wide_format_output_v2), "columns"))
 ```
 
 ## Combined Wide Export
 
-Generate a combined ICWD+LADWP wide‑format file for the full 2025 dataset.
+Generate a combined ICWD+LADWP wide‑format file for the full 2025 dataset. Suffixed transects appear as 400/500/600-series columns (e.g. T402 for T2_15).
 
 ```{r}
-# Export COMBINED ICWD+LADWP wide format CSV
-# Use the combined_2025_data which has both entities
-combined_with_base <- combined_2025_data %>%
+combined_wide_format_v2 <- combined_2025_data %>%
   select(Parcel, Transect, Code, Cover) %>%
-  mutate(Transect_base = gsub("_.*", "", Transect))
-
-# Combine transects with same base by summing Cover values
-# Note: If same Parcel+Transect exists in both entities, they will be summed
-combined_wide_data <- combined_with_base %>%
-  group_by(Parcel, Code, Transect_base) %>%
-  summarize(Cover = sum(Cover, na.rm = TRUE), .groups = 'drop') %>%
-  rename(Transect = Transect_base)
-
-# Pivot to wide format
-combined_wide_format <- combined_wide_data %>%
+  group_by(Parcel, Code, Transect) %>%
+  summarize(Cover = sum(Cover, na.rm = TRUE), .groups = "drop") %>%
   pivot_wider(
     id_cols = c(Parcel, Code),
     names_from = Transect,
@@ -653,28 +625,16 @@ combined_wide_format <- combined_wide_data %>%
   rename(SPECIES = Code) %>%
   arrange(Parcel, SPECIES)
 
-# Extract T column names and sort numerically
-combined_t_columns <- names(combined_wide_format)[grepl("^T", names(combined_wide_format))]
-combined_t_columns_sorted <- combined_t_columns[order(as.numeric(gsub("^T", "", combined_t_columns)))]
+combined_t_columns <- names(combined_wide_format_v2)[grepl("^T", names(combined_wide_format_v2))]
+combined_wide_format_v2 <- combined_wide_format_v2 %>%
+  select(Parcel, SPECIES, all_of(sort_transect_cols(combined_t_columns)))
 
-# Reorder columns
-combined_wide_format <- combined_wide_format %>%
-  select(Parcel, SPECIES, all_of(combined_t_columns_sorted))
-
-# Replace NA values with empty strings
-combined_wide_format_output <- combined_wide_format %>%
+combined_wide_format_output_v2 <- combined_wide_format_v2 %>%
   mutate(across(starts_with("T"), ~ ifelse(is.na(.), "", .)))
 
-# Save combined wide format
-write.csv(combined_wide_format_output, "output/ICWD_LADWP_merged_2025_wide.csv", row.names = FALSE, na = "")
-print("Combined ICWD+LADWP wide format data saved to output/ICWD_LADWP_merged_2025_wide.csv")
-print(paste("Combined wide format dimensions:", nrow(combined_wide_format_output), "rows,", ncol(combined_wide_format_output), "columns"))
-print("Preview of combined wide format:")
-print(head(combined_wide_format_output, 5))
-print("Wide format data saved to output/icwd_data2025_wide.csv")
-print(paste("Wide format dimensions:", nrow(wide_format), "rows,", ncol(wide_format), "columns"))
-print("Preview of wide format:")
-print(head(wide_format, 5))
+write.csv(combined_wide_format_output_v2, "output/ICWD_LADWP_merged_2025_wide_v2.csv", row.names = FALSE, na = "")
+print("Combined ICWD+LADWP wide format (v2) saved to output/ICWD_LADWP_merged_2025_wide_v2.csv")
+print(paste("Combined wide format dimensions:", nrow(combined_wide_format_output_v2), "rows,", ncol(combined_wide_format_output_v2), "columns"))
 ```
 
 ## Optional: Interactive Exploration
