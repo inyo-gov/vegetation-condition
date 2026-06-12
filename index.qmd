@@ -48,6 +48,9 @@ source(here("code","R","report_functions.R"))
 targets <- c(
   "species",
   "n_parcels_sampled",
+  "n_parcels_icwd_sampled",
+  "n_parcels_ladwp_sampled",
+  "ladwp_only_parcels",
   "cYear",
   "n_transects_sampled",
   "n_parcels_all_years",
@@ -116,7 +119,9 @@ The annual line‑point transect data are extracted from ICWD Google Sheets and 
 4.  **Merge** ICWD and LADWP datasets and append to the master dataset.\
 5.  **Export** long and wide deliverables for QA/QC, reporting, and archiving.
 
-In **`r cYear`**, the Inyo County Water Department (ICWD) and the Los Angeles Department of Water & Power (LADWP) jointly monitored **`r n_parcels_sampled`** vegetation parcels using **`r n_transects_sampled`** line-point intercept transects. Statistical tests compared current-year vegetation cover to the **1984-1987** baseline for **Wellfield** parcels (pumping-affected) and **Control** parcels (no pumping).
+In **`r cYear`**, ICWD measured **`r n_parcels_icwd_sampled`** reinventory vegetation parcels (Google Sheets) and LADWP measured **`r n_parcels_ladwp_sampled`** parcels, using **`r n_transects_sampled`** line-point intercept transects in total. LADWP delivers a long-format cover CSV and information file to ICWD each year. The merged master contains **`r n_parcels_sampled`** canonical reinventory parcel IDs because LADWP's extra parcel, **BIS082**, is included in the joint dataset even though ICWD did not field it. Statistical tests compared current-year vegetation cover to the **1984-1987** baseline for **Wellfield** parcels (pumping-affected) and **Control** parcels (no pumping).
+
+LADWP parcel names **TIN067** and **UNW037** are alternate labels for single transects at **BLK006** (transect 1) and **MAN038** (transect 23), per the LADWP Information file (`Parcel2` / `Long_PCL` fields); they are not separate parcels. Beyond the ICWD sheet extract, LADWP also measured **`r paste(ladwp_only_parcels, collapse = ", ")`** (reinventory data included in the merged master).
 
 We compare parcel-level cover in the 1984-1987 baseline (Nominal Year 1986) to the current year (`r sprintf("<span style='color:#006d2c;font-size:1.05em;'>%s</span>", cYear)`) for **Wellfield** and **Control** parcels using the paired subset shown below. Results summarize differences in total cover, grass, and shrub cover between baseline and current-year conditions; statistical significance is shown on the plot for each cover type (ns = not significant; \* indicates p \< 0.05).
 
@@ -144,7 +149,11 @@ pgrass_current <- parcels %>%
 
 pgrass_delta <- pgrass_current %>%
   left_join(pgrass_baseline, by = "Parcel") %>%
-  mutate(pGrass_delta = pGrass_current - pGrass_baseline)
+  mutate(
+    pGrass_baseline = round(pGrass_baseline, 2),
+    pGrass_current = round(pGrass_current, 2),
+    pGrass_delta = round(pGrass_current - pGrass_baseline, 2)
+  )
 
 map_data <- parcels_shp_ttest %>%
   filter(!is.na(geometry)) %>%
@@ -343,9 +352,11 @@ DT::datatable(
   class = "compact stripe nowrap"
 ) %>%
   DT::formatRound(
-    columns = c("Cover_D", "Grass_D", "Shrub_D", "DTW", "DTW_pct", "pGrass", "pShrub", "Cover", "Grass", "Shrub"),
+    columns = c("Cover_D", "Grass_D", "Shrub_D", "Cover", "Grass", "Shrub"),
     digits = 1
-  )
+  ) %>%
+  DT::formatRound(columns = c("DTW", "pGrass", "pShrub"), digits = 2) %>%
+  DT::formatRound(columns = "DTW_pct", digits = 1)
 ```
 
 Table 2 lists **control and other parcels** (all parcels not in the wellfield group): Type = Control (C) or Type NA/blank. Same columns as Table 1.
@@ -451,9 +462,11 @@ DT::datatable(
   class = "compact stripe nowrap"
 ) %>%
   DT::formatRound(
-    columns = c("Cover_D", "Grass_D", "Shrub_D", "DTW", "DTW_pct", "pGrass", "pShrub", "Cover", "Grass", "Shrub"),
+    columns = c("Cover_D", "Grass_D", "Shrub_D", "Cover", "Grass", "Shrub"),
     digits = 1
-  )
+  ) %>%
+  DT::formatRound(columns = c("DTW", "pGrass", "pShrub"), digits = 2) %>%
+  DT::formatRound(columns = "DTW_pct", digits = 1)
 ```
 
 ### Below vs. above baseline by group
@@ -637,6 +650,10 @@ Vegetation in Owens Valley is monitored annually to detect and attribute changes
 **Flagged parcels:** Flagged parcels indicate measurable (statistically significant) deviations from baseline. Whether these changes are attributable to pumping vs. other factors (e.g., drought, land use) are evaluated under **Green Book Section I.C.1.b**.
 
 ## Appendix
+
+### Parcel time series (PDF)
+
+Downloadable stacked time-series plots (cover, DTW, NDVI, precipitation) for reinventory parcels: [Parcel_TimeSeries_2025.pdf](Parcel_TimeSeries_2025.pdf).
 
 ### References
 

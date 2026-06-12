@@ -162,7 +162,7 @@ build_parcel_notes <- function(parcel_id) {
   cover_delta <- round(current$Cover.Delta, 1)
   grass_delta <- round(current$Grass.Delta, 1)
   shrub_delta <- round(current$Shrub.Delta, 1)
-  pgrass_pct <- if (!is.na(current$pGrass)) round(current$pGrass * 100, 1) else NA_real_
+  pgrass_pct <- if (!is.na(current$pGrass)) round(current$pGrass * 100, 2) else NA_real_
 
   ts_full <- parcels_deltas %>%
     filter(Parcel == parcel_id) %>%
@@ -275,8 +275,8 @@ build_parcel_notes <- function(parcel_id) {
   }
 
   dtw_text <- if (is.finite(dtw_current) && is.finite(dtw_baseline)) {
-    paste0("Current DTW (ft BGS): ", round(dtw_current, 1),
-           "; baseline avg (1984-86): ", round(dtw_baseline, 1), ".")
+    paste0("Current DTW (ft BGS): ", round(dtw_current, 2),
+           "; baseline avg (1984-86): ", round(dtw_baseline, 2), ".")
   } else {
     "Current DTW vs baseline: not available."
   }
@@ -342,7 +342,8 @@ for (i in seq_len(nrow(profile_parcels))) {
           is.finite(Shrub) & is.finite(pShrub) & pShrub > 0,
         Shrub / pShrub,
         Cover
-      )
+      ),
+      pGrass = round(pGrass, 2)
     )
 
   year_breaks <- sort(unique(c(seq(year_min, year_max, by = 5), year_max)))
@@ -430,7 +431,7 @@ for (i in seq_len(nrow(profile_parcels))) {
     geom_point(size = 1.6, color = "#1b9e77", na.rm = TRUE) +
     labs(x = NULL, y = "pGrass") +
     scale_x_continuous(breaks = year_breaks, expand = expansion(mult = c(0, 0))) +
-    scale_y_continuous(expand = expansion(mult = c(0.05, 0.28))) +
+    scale_y_continuous(expand = expansion(mult = c(0.05, 0.28)), labels = function(x) sprintf("%.2f", x)) +
     coord_cartesian(xlim = x_limits, clip = "off") +
     theme_minimal(base_size = 11) +
     theme(
@@ -456,7 +457,7 @@ for (i in seq_len(nrow(profile_parcels))) {
   if (nrow(dtw_ts) > 0 && any(!is.na(dtw_ts$DTW))) {
     dtw_stats <- dtw_ts %>%
       group_by(Year) %>%
-      summarise(DTW = mean(DTW, na.rm = TRUE), .groups = "drop") %>%
+      summarise(DTW = round(mean(DTW, na.rm = TRUE), 2), .groups = "drop") %>%
       complete(Year = year_min:year_max)
 
     baseline_avg <- mean(dtw_stats$DTW[dtw_stats$Year %in% 1984:1986], na.rm = TRUE)
@@ -469,7 +470,7 @@ for (i in seq_len(nrow(profile_parcels))) {
                hjust = 0, vjust = -0.5, size = 3, color = "#2c3e50") +
       scale_x_continuous(breaks = year_breaks, expand = expansion(mult = c(0, 0))) +
       coord_cartesian(xlim = x_limits) +
-      scale_y_reverse() +
+      scale_y_reverse(labels = function(x) sprintf("%.2f", x)) +
       labs(x = "Year", y = "DTW (ft BGS)") +
       theme_minimal(base_size = 11) +
       theme(
@@ -498,5 +499,3 @@ for (i in seq_len(nrow(profile_parcels))) {
   }
 }
 ```
-
-##

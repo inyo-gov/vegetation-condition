@@ -20,6 +20,7 @@ output/
 # Generated reports & request deliverables
 *.pdf
 Parcel_TimeSeries_*.pdf
+!docs/Parcel_TimeSeries_2025.pdf
 data_requests/
 
 # Local / scratch
@@ -29,3 +30,5 @@ trash/
 # macOS
 .DS_Store
 **/.DS_Store
+
+/.quarto/
