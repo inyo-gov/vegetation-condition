@@ -5,6 +5,14 @@ Owens Valley vegetation-condition LPT / NDVI / parcel-profile monitoring stack (
 
 ## Status notes
 
+### 2026-09-30 PT — IND026 spp-rank columns + layout fix
+- Decade table bug: dplyr `period` arg shadowed CSV column → every column repeated first-period ranks. Fixed with base-R `period_key` filter.
+- Layout: photo first → full-width LiDAR hillshade → ranks (no sidebar). Earliest reorder callout 2005 kept.
+- Live: https://icwd-vegetation-condition.vercel.app/docs/parcel_profiles.html#thibaut-sawmill--parcel-ind026
+- ICM: `docs/2026-09-30_ind026-spp-rank-layout-fix.md`. Research framing only.
+
+
+
 ### 2026-09-30 PT — IND026 profile ingest (hillshade + photo + spp-rank)
 - Live profile panel: hillshade Leaflet ImageOverlay + AGOL photo `IND026_05_212` + decade ranks (no 1990s; earliest reorder **2005**).
 - Assets: `www/flagged_parcel_maps/IND026/`. Helper: `code/R/flagged_parcel_context.R` (graceful skip). ICM: `docs/2026-09-30_ind026-profile-hillshade-spp-rank-ingest.md`.

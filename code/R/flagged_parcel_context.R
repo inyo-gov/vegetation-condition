@@ -118,7 +118,7 @@ flagged_parcel_has_context <- function(parcel_id) {
 
   paste0(
     "<style type=\"text/css\">\n", css, "\n",
-    "#", map_id, " { height: 420px; width: 100%; background:#1a1a1a; border-radius:6px; }\n",
+    "#", map_id, " { height: 520px; width: 100%; background:#1a1a1a; border-radius:6px; }\n",
     "</style>\n",
     "<div id=\"", map_id, "\" class=\"fp-leaflet-map\" role=\"img\" aria-label=\"",
     .fp_escape_html(parcel_id), " hillshade with overlays\"></div>\n",
@@ -216,11 +216,18 @@ flagged_parcel_has_context <- function(parcel_id) {
     ord <- focus_codes
   }
 
-  fmt_rank_cell <- function(code, period) {
-    hit <- ranks %>%
-      dplyr::filter(.data$species_code == code, .data$period == period) %>%
-      dplyr::slice(1)
+  # IMPORTANT: do not name the period arg `period` — dplyr would treat
+  # `.data$period == period` as column==column (always TRUE) and slice(1)
+  # would repeat the first period's ranks across every decade column.
+  fmt_rank_cell <- function(code, period_key) {
+    hit <- ranks[
+      !is.na(ranks$species_code) & ranks$species_code == code &
+        !is.na(ranks$period) & as.character(ranks$period) == as.character(period_key),
+      ,
+      drop = FALSE
+    ]
     if (!nrow(hit)) return("<span class=\"spp-na\">—</span>")
+    hit <- hit[1, , drop = FALSE]
     paste0(
       "<span class=\"spp-rank\">", hit$rank[[1]], "</span>",
       " <span class=\"spp-name\">", .fp_escape_html(dplyr::coalesce(hit$common[[1]], code)), "</span>",
@@ -325,26 +332,11 @@ emit_flagged_parcel_context <- function(parcel_id) {
     cat("<p class=\"flagged-context-pad\"><em>", .fp_escape_html(pad_note), "</em></p>\n", sep = "")
   }
 
-  cat("<div class=\"flagged-context-grid\">\n")
-  cat("<div class=\"flagged-context-map\">\n")
-
-  map_html <- NULL
-  if (!is.null(preview_png)) {
-    map_html <- tryCatch(
-      .fp_inline_leaflet_html(parcel_id, d, bounds, preview_png),
-      error = function(e) {
-        message("inline leaflet failed for ", parcel_id, ": ", e$message)
-        NULL
-      }
-    )
-  }
-  if (is.null(map_html) || !nzchar(map_html)) {
-    map_html <- .fp_static_map_html(parcel_id, d)
-  }
-  cat(map_html)
-  cat("</div>\n")
-
+  # Stacked one-column layout: photo first, then full-width hillshade
+  # (no sidebar / no shared-width photo+map row). Mobile/iPad friendly.
   photo <- .fp_find_photo(d)
+  cat("<div class=\"flagged-context-stack\">\n")
+
   cat("<div class=\"flagged-context-photo\">\n")
   if (!is.null(photo)) {
     ident <- if (!is.null(photo$meta$IDENT)) photo$meta$IDENT else basename(photo$path)
@@ -363,7 +355,25 @@ emit_flagged_parcel_context <- function(parcel_id) {
     cat("<p class=\"flagged-photo-missing\"><em>No representative photo asset for this parcel.</em></p>\n")
   }
   cat("</div>\n") # photo
-  cat("</div>\n") # grid
+
+  cat("<div class=\"flagged-context-map flagged-context-map-full\">\n")
+  cat("<p class=\"flagged-map-kicker\"><strong>LiDAR hillshade</strong> — parcel-framed topographic context</p>\n")
+  map_html <- NULL
+  if (!is.null(preview_png)) {
+    map_html <- tryCatch(
+      .fp_inline_leaflet_html(parcel_id, d, bounds, preview_png),
+      error = function(e) {
+        message("inline leaflet failed for ", parcel_id, ": ", e$message)
+        NULL
+      }
+    )
+  }
+  if (is.null(map_html) || !nzchar(map_html)) {
+    map_html <- .fp_static_map_html(parcel_id, d)
+  }
+  cat(map_html)
+  cat("</div>\n") # map
+  cat("</div>\n") # stack
 
   tbl <- tryCatch(.fp_decade_rank_table_html(parcel_id, d), error = function(e) {
     message("spp-rank table failed for ", parcel_id, ": ", e$message)

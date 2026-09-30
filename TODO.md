@@ -15,6 +15,7 @@
 - [x] 2026-09-30 Flagged-parcel spp-rank method sketch + LAW052 decade prototype (research draft) — plan `docs/2026-09-30_flagged-parcel-hillshade-photo-spp-rank-plan.md`; exports `exports/spp_rank_mvp_2026-09-30/`
 - [x] 2026-09-30 IND026 decade spp-rank prototype (research draft) — exports `exports/spp_rank_mvp_2026-09-30/IND026_*.csv`; script `code/run_spp_rank_decade_IND026_2026-09-30.R`; LAW052_* left as method demo; pivot `docs/2026-09-30_flagged-mvp-c-to-b-pivot.md`
 - [x] Profile UI decade rank table — IND026 live on parcel_profiles; extend by adding `www/flagged_parcel_maps/{PCL}/`
+- [x] IND026 spp-rank decade columns differ + photo→full-width hillshade layout (2026-09-30 fix)
 - [ ] Optional later: forcing co-parcel note when grazing/fire parcel joins exist — still not I.C.1.b
 
 - [ ] Transition-first hillshade packages still queued for **IND029 → TIN064** (geo); IND026 profile ingest UI done; LAW052 remains reference package; see pivot + ingest ICM
