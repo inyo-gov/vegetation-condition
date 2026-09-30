@@ -1,0 +1,15 @@
+{
+  "IDENT": "IND026_05_212",
+  "OBJECTID": 1077,
+  "Parcel": "IND026",
+  "TRANSECT": 5,
+  "BEARING": 212,
+  "visit_date": 1719947222088,
+  "visit_date_iso": "2024-07-02",
+  "attachment_id": 284,
+  "attachment_name": "Photo 1.jpg",
+  "agol_layer": "https://services.arcgis.com/0jRlQ17Qmni5zEMr/arcgis/rest/services/lpt_points_view/FeatureServer/0",
+  "selection_rule": "prefer IND026_05_212 (odd transect for even-year ICWD; mirrors LAW052_05_*); attachment from lpt_points_view",
+  "photo_agol": "IND026_05_212_agol.jpg",
+  "photo_local_labeled": "local_labeled_IND026_05_212_2024.jpg"
+}

@@ -1,63 +1,161 @@
-/* Custom styles for Inyo County Quarto sites (aligned with hydro-data) */
+/* Green Book I.C.1.a site — paper-like chrome, light/dark toggle */
 
-/* Global font consistency */
+@import url("https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap");
+
+:root {
+  --ink: #1c1c1c;
+  --muted: #5c5c5c;
+  --rule: #d9d5ce;
+  --paper: #fbfaf8;
+  --surface: #ffffff;
+  --accent: #3d3a36;
+  --link: #2c2c2c;
+  --link-hover: #000000;
+  /* Shared shell: same max width on every site page (content + TOC) */
+  --site-shell: 72rem;
+}
+
+html {
+  font-size: 15px;
+}
+
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  font-size: 16px;
-  line-height: 1.6;
+  font-family: "Source Serif 4", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  color: var(--ink);
+  background: var(--paper);
+  line-height: 1.55;
 }
 
-h1, h2, h3, h4, h5, h6 {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+h1, h2, h3, h4, h5, h6,
+.navbar,
+.quarto-title-meta,
+#TOC,
+.btn,
+.page-footer,
+code, pre, kbd, samp {
+  font-family: "Source Sans 3", "Avenir Next", "Segoe UI", Helvetica, Arial, sans-serif;
+}
+
+h1, h2, h3, h4 {
+  color: var(--ink);
   font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
 }
 
-/* Custom navbar styling (Inyo blue theme) */
+h1.title {
+  font-size: 1.75rem;
+  margin-bottom: 0.35rem;
+}
+
+.subtitle {
+  color: var(--muted);
+  font-size: 1rem;
+  font-weight: 400;
+}
+
+/* ---- Compact paper navbar (no agency-blue banner) ---- */
 .navbar {
-  background-color: #2E86AB !important;
+  background-color: var(--surface) !important;
+  border-bottom: 1px solid var(--rule);
+  padding-top: 0.2rem;
+  padding-bottom: 0.2rem;
+  min-height: 2.85rem;
+  box-shadow: none !important;
 }
 
-.navbar-brand {
+.navbar .navbar-brand {
   display: flex;
   align-items: center;
-  color: white !important;
+  gap: 0.4rem;
+  color: var(--ink) !important;
+  font-size: 0.95rem;
+  font-weight: 600;
+  padding-top: 0.25rem;
+  padding-bottom: 0.25rem;
 }
 
-.navbar-nav .nav-link {
-  color: white !important;
-}
-
-.navbar-nav .nav-link:hover {
-  color: #e9ecef !important;
-}
-
-.navbar-text {
-  color: white !important;
-}
-
-.navbar-brand img {
-  height: 40px;
-  max-height: 40px;
+.navbar-brand img,
+.navbar-logo {
+  height: 28px !important;
+  max-height: 28px !important;
   width: auto;
-  margin-right: 10px;
+  margin-right: 0.35rem;
   object-fit: contain;
-  background-color: white;
-  border-radius: 4px;
-  padding: 2px;
+  background: transparent;
+  border-radius: 0;
+  padding: 0;
 }
 
-/* Better link styling */
+.navbar .navbar-nav .nav-link,
+.navbar .quarto-navbar-tools .nav-link {
+  color: var(--ink) !important;
+  font-size: 0.82rem !important;
+  font-weight: 500;
+  padding: 0.35rem 0.55rem !important;
+  white-space: nowrap;
+}
+
+.navbar .navbar-nav .nav-link:hover,
+.navbar .navbar-nav .nav-link:focus,
+.navbar .navbar-nav .nav-link.active,
+.navbar .quarto-navbar-tools .nav-link:hover {
+  color: var(--link-hover) !important;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  background: transparent !important;
+}
+
+.navbar .navbar-toggler {
+  padding: 0.2rem 0.4rem;
+  font-size: 0.85rem;
+  border-color: var(--rule);
+}
+
+.navbar .navbar-toggler-icon {
+  filter: none;
+}
+
+/* Title block */
+.quarto-title-block {
+  border-bottom: 1px solid var(--rule);
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.75rem;
+}
+
+.quarto-title-meta-heading {
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.quarto-title-meta-contents {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+/* Links */
 a {
-  color: #2E86AB;
-  text-decoration: none;
+  color: var(--link);
+  text-decoration: underline;
+  text-decoration-thickness: 0.06em;
+  text-underline-offset: 0.15em;
 }
 
 a:hover {
-  color: #1e5a73;
-  text-decoration: underline;
+  color: var(--link-hover);
 }
 
-/* Same body width on all pages: fill the main grid column (no extra max-width) */
+/* Layout: one shared shell width on all pages; fill main column inside it */
+#quarto-content.page-columns,
+#quarto-content {
+  max-width: var(--site-shell);
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  box-sizing: border-box;
+}
+
 .page-columns .content,
 .main-container,
 #quarto-content .content {
@@ -70,13 +168,12 @@ a:hover {
   box-sizing: border-box;
 }
 
-/* Ensure TOC sidebar has room; use grid so main content and sidebar never overlap */
 #quarto-content.page-columns {
   display: grid !important;
-  grid-template-columns: minmax(0, 1fr) minmax(260px, 280px);
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 260px);
   grid-template-areas: "main margin";
   padding-right: 0;
-  gap: 0 1.5rem;
+  gap: 0 1.25rem;
 }
 
 #quarto-content.page-columns > #quarto-margin-sidebar,
@@ -94,26 +191,34 @@ a:hover {
   order: 1;
 }
 
-/* Fallback: keep main content from extending under sidebar if grid is overridden */
-#quarto-content.page-columns main.content {
-  margin-right: 0;
-  box-sizing: border-box;
-}
-
 #quarto-content.page-columns .content,
 #quarto-content.page-columns #quarto-document-content {
   max-width: 100%;
   overflow-wrap: break-word;
 }
 
-/* Prevent very wide figures from blowing out the layout (e.g. parcel profiles) */
 #quarto-content .content .cell-output-display img,
 #quarto-content .content figure img {
   max-width: 100%;
   height: auto;
 }
 
-/* Better figure styling (responsive on mobile) */
+#quarto-margin-sidebar,
+#quarto-margin-sidebar nav#TOC,
+.sidebar.margin-sidebar {
+  min-width: 0;
+  overflow-wrap: break-word;
+  /* Keep right-edge TOC/margin content from sitting flush or clipping. */
+  padding-right: 1rem;
+  box-sizing: border-box;
+}
+
+#quarto-margin-sidebar #TOC a,
+#quarto-margin-sidebar .nav-link {
+  white-space: normal;
+  overflow-wrap: break-word;
+}
+
 .figure {
   margin: 2rem 0;
   text-align: center;
@@ -122,63 +227,410 @@ a:hover {
 .figure img {
   max-width: 100%;
   height: auto;
-  border-radius: 0.375rem;
+  border-radius: 0.25rem;
 }
 
-/* Right-hand TOC / margin sidebar: allow wrapping so entries don’t truncate */
-#quarto-margin-sidebar,
-#quarto-margin-sidebar nav#TOC,
-.sidebar.margin-sidebar {
-  min-width: 0;
-  overflow-wrap: break-word;
-  word-wrap: break-word;
+caption,
+.quarto-float-caption-top,
+.quarto-float-caption-bottom,
+.figure-caption,
+figcaption,
+.table-caption {
+  font-family: "Source Sans 3", "Avenir Next", "Segoe UI", Helvetica, Arial, sans-serif;
+  font-size: 0.8rem;
+  color: var(--muted);
+  text-align: left;
+  line-height: 1.35;
 }
 
-#quarto-margin-sidebar #TOC a,
-#quarto-margin-sidebar .nav-link {
-  white-space: normal;
-  word-wrap: break-word;
-  overflow-wrap: break-word;
+.page-footer {
+  border-top: 1px solid var(--rule);
+  font-size: 0.8rem;
+  color: var(--muted);
+  background: transparent !important;
 }
 
-.tocify {
-  position: fixed;
-  right: 20px;
-  top: 110px;
-  width: 240px;
-  max-width: min(280px, 100%);
-  max-height: 75vh;
-  overflow-y: auto;
-  z-index: 1;
-}
-
-/* Let main content column shrink so it doesn’t overflow the grid */
-#quarto-content .column-page-inner,
-#quarto-content .column-margin,
-.page-columns .column-page {
-  min-width: 0;
-}
-
-.column-screen {
-  padding-left: 16px;
-  padding-right: 16px;
-  box-sizing: border-box;
+.parcel-profile-figure {
+  margin: 1rem 0 1.75rem;
+  overflow-x: auto;
 }
 
 .parcel-profile-figure img,
 .parcel-profile-figure svg {
   display: block;
   width: 100% !important;
-  height: auto;
+  max-width: 100%;
+  height: auto !important;
+  /* Keep stacked panels readable when the page is wide */
+  min-height: min(47vh, 35rem);
 }
 
-/* Mobile: single column so TOC stacks below main, no overlap */
+/* Status badges on graduate parcel profiles
+   Color rule: green = good / screen clear; orange = bad / flagged.
+   No strikethrough — inactive screens use positive green wording instead. */
+/* Unified parcel screening panel (status tiles + Support / Not supported) */
+.parcel-screening {
+  margin: 0.35rem 0 1.15rem;
+}
+
+.parcel-status-row {
+  display: none; /* redundant with Support / Not supported */
+}
+
+.parcel-status-tile {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.42rem;
+  min-height: 3.1rem;
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.25;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.parcel-status-tile .badge-icon {
+  flex: 0 0 auto;
+  font-size: 0.85rem;
+  line-height: 1.25;
+}
+
+.parcel-status-tile .badge-copy {
+  display: block;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.parcel-status-tile.is-good {
+  color: var(--ink);
+  border-color: #6b8f71;
+  border-left: 3px solid #6b8f71;
+  background: #eef5ef;
+}
+
+.parcel-status-tile.is-bad {
+  color: var(--ink);
+  border-color: #d97706;
+  border-left: 3px solid #d97706;
+  background: #fff4e5;
+}
+
+.parcel-status-tile.is-na {
+  opacity: 0.85;
+  border-color: var(--rule);
+  border-left: 3px solid var(--rule);
+  background: var(--surface);
+  color: var(--muted);
+}
+
+.parcel-cards-intro {
+  margin: 0 0 0.55rem;
+  font-size: 0.86rem;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+.parcel-cards-intro strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* Sequential screening cards: Support → Not supported → Next steps (one column) */
+.parcel-cards,
+.parcel-cards-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin: 0;
+  position: relative;
+  z-index: 1;
+}
+.parcel-status-row {
+  display: none; /* top colored summary tiles removed — redundant with Support/Not supported */
+}
+.parcel-card {
+  border: 1px solid var(--rule);
+  border-radius: 0.35rem;
+  background: var(--surface);
+  padding: 0.65rem 0.85rem 0.75rem;
+  box-shadow: 0 1px 0 rgba(0,0,0,0.03);
+  box-sizing: border-box;
+  min-width: 0;
+}
+.parcel-card-span {
+  grid-column: 1 / -1;
+}
+p.parcel-card-title,
+.parcel-card-title {
+  font-family: "Source Sans 3", "Avenir Next", "Segoe UI", Helvetica, Arial, sans-serif;
+  font-size: 0.92rem;
+  font-weight: 600;
+  margin: 0 0 0.45rem;
+  letter-spacing: -0.01em;
+}
+.parcel-card-sub {
+  font-weight: 500;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+.parcel-card-support {
+  border-color: #6b8f71;
+  border-left: 3px solid #6b8f71;
+  background: #f4f8f4;
+}
+.parcel-card-not-supported {
+  border-color: #9aa0a6;
+  border-left: 3px solid #8a9098;
+  background: #f6f6f7;
+}
+.parcel-card-next {
+  border-color: #6b7f9a;
+  border-left: 3px solid #6b7f9a;
+  background: #f3f6fa;
+}
+.parcel-card-stable {
+  border-color: #8a9a5b;
+  border-left: 3px solid #8a9a5b;
+  background: #f7faf4;
+}
+
+.quarto-dark .parcel-status-tile.is-good,
+.quarto-dark .parcel-card-support {
+  background: #1f2a22;
+  border-color: #6b8f71;
+  color: var(--ink);
+}
+.quarto-dark .parcel-status-tile.is-bad {
+  background: #2a2014;
+  border-color: #d97706;
+  color: var(--ink);
+}
+.quarto-dark .parcel-status-tile.is-na {
+  opacity: 0.75;
+  background: var(--surface);
+  border-color: var(--rule);
+  color: var(--muted);
+}
+.quarto-dark .parcel-card-not-supported {
+  background: #222326;
+  border-color: #6a7078;
+}
+.quarto-dark .parcel-card-next {
+  background: #1c222a;
+  border-color: #6b7f9a;
+}
+.parcel-card-list {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+.parcel-card-list li {
+  margin: 0.25rem 0;
+}
+
+/* Accounting ledger: current | baseline | Δ */
+.evidence-ledger {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.84rem;
+  margin: 0.15rem 0 0.35rem;
+  font-variant-numeric: tabular-nums;
+}
+.evidence-ledger th,
+.evidence-ledger td {
+  padding: 0.28rem 0.45rem;
+  border-bottom: 1px solid var(--rule);
+  text-align: left;
+  vertical-align: baseline;
+}
+.evidence-ledger thead th {
+  font-weight: 600;
+  color: var(--muted);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid var(--ink);
+}
+.evidence-ledger th.ledger-metric,
+.evidence-ledger tbody th {
+  font-weight: 600;
+  color: var(--ink);
+  width: 28%;
+}
+.evidence-ledger .num {
+  text-align: right;
+  white-space: nowrap;
+}
+.evidence-ledger .delta {
+  font-weight: 600;
+  border-left: 1px solid var(--rule);
+  background: rgba(0,0,0,0.02);
+}
+.evidence-ledger tbody tr:last-child th,
+.evidence-ledger tbody tr:last-child td {
+  border-bottom: none;
+}
+.quarto-dark .evidence-ledger .delta {
+  background: rgba(255,255,255,0.04);
+}
+.quarto-dark .evidence-ledger thead th {
+  border-bottom-color: var(--muted);
+}
+
+.parcel-card-empty {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+.quarto-dark .parcel-card-stable {
+  background: #1c2418;
+}
+
+/* Collapsible background sections (Purpose / Methods) */
+details.section-fold {
+  border: 1px solid var(--rule);
+  border-radius: 0.25rem;
+  padding: 0.55rem 0.9rem 0.65rem;
+  margin: 0.65rem 0 1rem;
+  background: var(--surface);
+}
+
+details.section-fold > summary {
+  font-family: "Source Sans 3", "Avenir Next", "Segoe UI", Helvetica, Arial, sans-serif;
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--ink);
+  cursor: pointer;
+  list-style: none;
+}
+
+details.section-fold > summary::-webkit-details-marker {
+  display: none;
+}
+
+details.section-fold > summary::before {
+  content: "▸ ";
+  color: var(--muted);
+  font-weight: 500;
+}
+
+details.section-fold[open] > summary::before {
+  content: "▾ ";
+}
+
+details.section-fold > summary:hover {
+  color: var(--link-hover);
+}
+
+details.section-fold[open] {
+  padding-bottom: 0.9rem;
+}
+
+details.section-fold > *:not(summary) {
+  margin-top: 0.75rem;
+}
+
+.quarto-dark details.section-fold {
+  background: var(--surface);
+  border-color: var(--rule);
+}
+
+/* Keep parcel ID visible when scrolling wide DT tables */
+table.dataTable tbody td.dtfc-fixed-left,
+table.dataTable thead tr > .dtfc-fixed-left,
+table.dataTable tfoot tr > .dtfc-fixed-left {
+  background-color: var(--surface) !important;
+}
+
+.quarto-dark table.dataTable tbody td.dtfc-fixed-left,
+.quarto-dark table.dataTable thead tr > .dtfc-fixed-left {
+  background-color: var(--surface) !important;
+}
+
+/* ---- Dark mode (Quarto theme toggle → .quarto-dark) ---- */
+.quarto-dark {
+  --ink: #e8e6e3;
+  --muted: #a8a29e;
+  --rule: #3f3f46;
+  --paper: #18181b;
+  --surface: #27272a;
+  --accent: #e4e4e7;
+  --link: #e4e4e7;
+  --link-hover: #ffffff;
+}
+
+.quarto-dark body {
+  background-color: var(--paper);
+  color: var(--ink);
+}
+
+.quarto-dark .navbar {
+  background-color: var(--surface) !important;
+  border-bottom-color: var(--rule);
+}
+
+.quarto-dark .navbar .navbar-brand,
+.quarto-dark .navbar .navbar-nav .nav-link,
+.quarto-dark .navbar .quarto-navbar-tools .nav-link {
+  color: var(--ink) !important;
+}
+
+.quarto-dark .navbar .navbar-nav .nav-link:hover,
+.quarto-dark .navbar .navbar-nav .nav-link.active {
+  color: var(--link-hover) !important;
+}
+
+.quarto-dark .sidebar,
+.quarto-dark #TOC,
+.quarto-dark .margin-sidebar {
+  background-color: transparent !important;
+  color: var(--ink);
+  border-color: var(--rule);
+}
+
+.quarto-dark #TOC .nav-link {
+  color: var(--muted) !important;
+}
+
+.quarto-dark #TOC .nav-link:hover,
+.quarto-dark #TOC .nav-link.active {
+  color: var(--link-hover) !important;
+}
+
+.quarto-dark .quarto-title-block {
+  border-bottom-color: var(--rule);
+}
+
+.quarto-dark a {
+  color: var(--link);
+}
+
+.quarto-dark a:hover {
+  color: var(--link-hover);
+}
+
+.quarto-dark .page-footer {
+  border-top-color: var(--rule);
+  color: var(--muted);
+}
+
+.quarto-dark mark,
+.quarto-dark .mark {
+  background-color: #4a4a00 !important;
+  color: #ffff99 !important;
+}
+
+.quarto-dark code {
+  background-color: #2d2d2d !important;
+  color: #e0e0e0 !important;
+}
+
 @media (max-width: 991px) {
   #quarto-content.page-columns {
     display: grid !important;
     grid-template-columns: 1fr !important;
     grid-template-areas: "main" "margin" !important;
-    padding-right: 0;
     padding-left: 15px;
   }
 
@@ -198,33 +650,445 @@ a:hover {
     padding-left: 15px;
     padding-right: 15px;
   }
-
-  .tocify {
-    position: static;
-    width: auto;
-    max-height: none;
-  }
 }
 
-/* Smaller viewports: tighter typography and touch-friendly spacing */
 @media (max-width: 768px) {
   body {
     font-size: 15px;
   }
 
-  .page-columns .content,
-  .main-container,
-  #quarto-content .content {
-    padding-left: 12px;
-    padding-right: 12px;
+  .navbar .navbar-nav .nav-link {
+    white-space: normal;
   }
 
   .navbar-brand img {
-    height: 32px;
-    max-height: 32px;
+    height: 24px !important;
+    max-height: 24px !important;
   }
+}
 
-  .figure {
-    margin: 1rem 0;
+/* Keep statistically selected IndVal associates distinct from ranked dominants. */
+.indval-suffix { color: #2a7f86; font-weight: 600; }
+
+/* Aligned evidence cards on parcel profiles */
+.parcel-evidence-column {
+  min-width: 0;
+}
+.evidence-card {
+  border: 1px solid var(--rule);
+  border-radius: 0.3rem;
+  background: var(--surface);
+  padding: 0.4rem 0.5rem 0.45rem;
+  margin: 0 0 0.4rem;
+}
+.evidence-card:last-child {
+  margin-bottom: 0;
+}
+.evidence-card.is-muted {
+  background: color-mix(in srgb, var(--surface) 88%, var(--rule));
+  color: var(--muted);
+}
+.evidence-card h4 {
+  margin: 0 0 0.35rem;
+  font-size: 0.84rem;
+  font-weight: 650;
+  letter-spacing: 0;
+}
+.evidence-row {
+  display: grid;
+  grid-template-columns: minmax(4.5rem, 0.85fr) repeat(3, minmax(0, 1fr));
+  gap: 0.28rem;
+  align-items: start;
+  padding: 0.18rem 0;
+  border-top: 1px solid color-mix(in srgb, var(--rule) 65%, transparent);
+  font-size: 0.78rem;
+  line-height: 1.22;
+}
+.evidence-row > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.evidence-row:first-of-type {
+  border-top: 0;
+}
+.evidence-label {
+  font-weight: 600;
+}
+.evidence-current,
+.evidence-baseline,
+.evidence-delta {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.evidence-baseline,
+.evidence-delta {
+  color: var(--muted);
+}
+.evidence-delta {
+  font-weight: 600;
+}
+.evidence-wide {
+  grid-column: 2 / -1;
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.evidence-wide small {
+  display: block;
+  margin-top: 0.12rem;
+  color: var(--muted);
+  font-size: 0.7rem;
+  line-height: 1.2;
+}
+
+/* Evidence-pack DT: show a compact summary while retaining the full value on hover. */
+.evidence-pack-table .evidence-cell {
+  display: inline-block;
+  max-width: 15rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
+}
+.evidence-pack-table table.dataTable tbody td {
+  line-height: 1.15;
+  padding-top: 0.3rem;
+  padding-bottom: 0.3rem;
+}
+.quarto-dark .evidence-card.is-muted {
+  background: color-mix(in srgb, var(--surface) 88%, #111);
+}
+@media (max-width: 40rem) {
+  .evidence-row {
+    grid-template-columns: minmax(4rem, 0.8fr) minmax(5rem, 1fr) minmax(4.2rem, 0.9fr);
   }
+  .evidence-baseline {
+    display: none;
+  }
+}
+
+
+/* Parcel profile NMDS / stacked figures — avoid card/figure collision */
+.parcel-profile-figure {
+  clear: both;
+  margin: 0.75rem 0 1.25rem;
+  max-width: 100%;
+  overflow: hidden;
+}
+.parcel-profile-figure img,
+.parcel-profile-figure svg {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Keep status cards from overlapping neighbor columns / TOC */
+.parcel-cards {
+  position: relative;
+  z-index: 1;
+  overflow: visible;
+}
+.parcel-evidence-column {
+  overflow: hidden;
+}
+
+/* Evidence-pack wide tables: horizontal scroll instead of page overflow */
+.evidence-pack-table {
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.evidence-pack-table table.dataTable {
+  width: 100% !important;
+}
+
+/* Percentile rank: two non-overlapping lines */
+.evidence-row-stack {
+  grid-template-columns: minmax(4.5rem, 0.85fr) minmax(0, 1fr) !important;
+}
+.evidence-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+  min-width: 0;
+}
+.evidence-line {
+  display: block;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+.evidence-line.is-muted {
+  color: var(--muted);
+  font-size: 0.74rem;
+}
+
+/* NDVI mini table inside evidence cards */
+.evidence-mini-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+  margin: 0.1rem 0 0.35rem;
+}
+.evidence-mini-table th,
+.evidence-mini-table td {
+  text-align: left;
+  padding: 0.18rem 0.35rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--rule) 70%, transparent);
+  vertical-align: top;
+}
+.evidence-mini-table th {
+  font-weight: 600;
+  color: var(--muted);
+}
+.evidence-footnote {
+  margin: 0.15rem 0 0;
+  font-size: 0.7rem;
+  line-height: 1.25;
+  color: var(--muted);
+}
+
+
+.evidence-flag {
+  margin: 0.35rem 0 0.2rem;
+  padding: 0.35rem 0.45rem;
+  border-radius: 0.25rem;
+  font-size: 0.76rem;
+  line-height: 1.3;
+}
+.evidence-flag.is-problem {
+  background: #fff4e5;
+  border: 1px solid #d97706;
+  color: var(--ink);
+}
+.quarto-dark .evidence-flag.is-problem {
+  background: #2a2014;
+  border-color: #d97706;
+}
+
+/* ---- Tufte-style margin figures on parcel profiles ---- */
+.parcel-profile-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(10.5rem, 16.5rem);
+  /* Column gutter: clear gap between left Support/Not-supported cards and right plots. */
+  gap: 0.75rem 1.5rem;
+  align-items: start;
+  margin: 0 0 1.5rem;
+}
+.parcel-profile-main {
+  min-width: 0;
+  /* Breathing room on the right edge of left-column Support/Not-supported cards. */
+  padding-right: 0.65rem;
+  box-sizing: border-box;
+}
+.parcel-profile-main .parcel-screening,
+.parcel-profile-main .parcel-cards {
+  margin-right: 0.35rem;
+}
+.parcel-profile-main .parcel-card-support,
+.parcel-profile-main .parcel-card-not-supported {
+  margin-right: 0.25rem;
+}
+.parcel-profile-margin {
+  position: sticky;
+  top: 3.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  min-width: 0;
+  /* Page-edge breathing for Tufte side plots. */
+  padding-right: 1rem;
+  box-sizing: border-box;
+}
+.parcel-margin-fig {
+  margin: 0;
+  padding: 0.35rem 0.4rem 0.45rem;
+  border: 1px solid var(--rule);
+  border-radius: 0.3rem;
+  background: var(--surface);
+  box-shadow: 0 1px 0 rgba(0,0,0,0.03);
+}
+.parcel-margin-fig img {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin: 0;
+}
+.parcel-margin-caption {
+  margin: 0.28rem 0 0;
+  font-family: "Source Sans 3", "Avenir Next", "Segoe UI", Helvetica, Arial, sans-serif;
+  font-size: 0.68rem;
+  line-height: 1.25;
+  color: var(--muted);
+}
+.parcel-margin-caption strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+.parcel-timeseries-block {
+  clear: both;
+  margin-top: 0.35rem;
+}
+@media (max-width: 64rem) {
+  .parcel-profile-layout {
+    grid-template-columns: 1fr;
+  }
+  .parcel-profile-margin {
+    position: static;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  }
+}
+
+.lifeform-swatch {
+  display: inline-block;
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 0.12rem;
+  margin-right: 0.35rem;
+  vertical-align: -0.05rem;
+  border: 1px solid color-mix(in srgb, var(--ink) 20%, transparent);
+}
+.ndvi-inline-diag {
+  margin: 0.45rem 0 0.15rem;
+}
+.ndvi-inline-diag img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 0.25rem;
+  border: 1px solid var(--rule);
+}
+.ndvi-inline-diag figcaption {
+  margin-top: 0.25rem;
+  font-size: 0.7rem;
+  line-height: 1.25;
+  color: var(--muted);
+}
+.parcel-next-steps {
+  padding-left: 1.15rem;
+}
+.parcel-next-steps li {
+  margin: 0.55rem 0;
+}
+.parcel-next-steps .next-step-text {
+  margin: 0;
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+/* ---- Flagged-parcel hillshade / photo / spp-rank context (IND026 MVP) ---- */
+.flagged-parcel-context {
+  margin: 0.75rem 0 1.25rem;
+  padding: 0.75rem 0.9rem 1rem;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 8px;
+  background: #fafafa;
+}
+.flagged-context-lead,
+.flagged-context-pad,
+.flagged-map-legend,
+.spp-rank-note,
+.spp-rank-caption {
+  font-size: 0.92rem;
+  color: #37474f;
+  margin: 0.35rem 0 0.55rem;
+}
+.flagged-context-pad { color: #607d8b; font-size: 0.85rem; }
+.flagged-context-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(220px, 0.75fr);
+  gap: 0.9rem;
+  align-items: start;
+  margin-bottom: 0.75rem;
+}
+@media (max-width: 900px) {
+  .flagged-context-grid { grid-template-columns: 1fr; }
+}
+.flagged-context-map .leaflet-container,
+.flagged-context-map .html-widget {
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid #cfd8dc;
+}
+.flagged-map-legend { font-size: 0.8rem; margin-top: 0.4rem; }
+.flagged-map-legend .lg-b { color: #c9a000; font-weight: 600; }
+.flagged-map-legend .lg-a { color: #0288d1; font-weight: 600; }
+.flagged-map-legend .lg-t { color: #c62828; font-weight: 600; }
+.flagged-map-legend .lg-p { color: #ef6c00; font-weight: 600; }
+.flagged-photo img,
+.flagged-static-map img {
+  width: 100%;
+  height: auto;
+  border-radius: 6px;
+  border: 1px solid #cfd8dc;
+  display: block;
+}
+.flagged-photo figcaption,
+.flagged-static-map figcaption {
+  font-size: 0.82rem;
+  color: #546e7a;
+  margin-top: 0.35rem;
+}
+.spp-rank-panel h4 {
+  margin: 0.4rem 0 0.5rem;
+  font-size: 1.05rem;
+}
+.spp-rank-callout {
+  background: #fff8e1;
+  border-left: 4px solid #ffb300;
+  padding: 0.45rem 0.7rem;
+  margin: 0.4rem 0 0.6rem;
+  font-size: 0.95rem;
+}
+.spp-rank-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.spp-rank-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.84rem;
+  background: #fff;
+}
+.spp-rank-table th,
+.spp-rank-table td {
+  border: 1px solid #e0e0e0;
+  padding: 0.4rem 0.5rem;
+  vertical-align: top;
+  text-align: left;
+}
+.spp-rank-table thead th {
+  background: #eceff1;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.spp-rank-table tbody th {
+  background: #f5f5f5;
+  min-width: 7.5rem;
+}
+.spp-rank-table .spp-rank { font-weight: 700; color: #263238; }
+.spp-rank-table .spp-name { color: #37474f; }
+.spp-rank-table .spp-abs { color: #455a64; font-variant-numeric: tabular-nums; }
+.spp-rank-table .spp-rel { color: #78909c; font-size: 0.78rem; }
+.spp-rank-table .spp-sci { font-style: italic; color: #607d8b; font-size: 0.78rem; }
+.spp-rank-table .spp-lf { color: #90a4ae; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.03em; }
+.spp-rank-table .spp-na { color: #b0bec5; }
+.spp-rank-caption { font-size: 0.8rem; color: #78909c; margin-top: 0.5rem; }
+
+body.quarto-dark .flagged-parcel-context,
+.quarto-dark .flagged-parcel-context {
+  background: #1e1e1e;
+  border-color: #424242;
+}
+body.quarto-dark .spp-rank-table,
+.quarto-dark .spp-rank-table { background: #121212; }
+body.quarto-dark .spp-rank-table thead th,
+.quarto-dark .spp-rank-table thead th { background: #2a2a2a; }
+body.quarto-dark .spp-rank-table tbody th,
+.quarto-dark .spp-rank-table tbody th { background: #1a1a1a; }
+body.quarto-dark .spp-rank-callout,
+.quarto-dark .spp-rank-callout {
+  background: #332b00;
+  border-left-color: #ffb300;
+  color: #ffe082;
 }

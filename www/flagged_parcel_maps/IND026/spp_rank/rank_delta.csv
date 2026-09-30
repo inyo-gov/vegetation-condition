@@ -1,0 +1,14 @@
+species_code,scientific,common,lifeform,rank_baseline,cover_rel_baseline,cover_abs_mean_baseline,rank_1990s,cover_rel_1990s,cover_abs_mean_1990s,rank_2000s,cover_rel_2000s,cover_abs_mean_2000s,rank_2010s,cover_rel_2010s,cover_abs_mean_2010s,rank_current,cover_rel_current,cover_abs_mean_current,first_year_rank_changed_K3,first_year_topk_order_diff_parcel
+SPAI,Sporobolus airoides,"sacaton, Alkali",Grass,1,1,49,NA,NA,NA,4,0.064583,1.868,4,0.067867,2.736,4,0.094832,3.56,2005,2005
+ATTO,Atriplex torreyi,"saltbush, Nevada/Torrey's",Shrub,NA,NA,NA,NA,NA,NA,1,0.52246,16.416,1,0.358361,14.574,2,0.267981,10.06,NA,2005
+ARTR2,Artemisia tridentata,"sagebrush, Big",Shrub,NA,NA,NA,NA,NA,NA,2,0.199117,6.036,2,0.273416,11.139,1,0.456047,17.12,NA,2005
+ERNA10,Ericameria nauseosa,"rabbitbrush, Common",Shrub,NA,NA,NA,NA,NA,NA,3,0.067416,2.05,3,0.082205,3.313,3,0.114811,4.31,NA,2005
+ATPO,Atriplex polycarpa,"saltbush, Allscale",Shrub,NA,NA,NA,NA,NA,NA,5,0.035009,1.18,5,0.05372,2.2422,5,0.026638,1,NA,2005
+DISP,Distichlis spicata,Saltgrass,Grass,NA,NA,NA,NA,NA,NA,6,0.023955,0.72,6,0.038773,1.526,8,0.005061,0.19,NA,2005
+SALA3,Salix laevigata,"willow, Red",Tree,NA,NA,NA,NA,NA,NA,7,0.016538,0.56,NA,NA,NA,9,0.005061,0.19,NA,2005
+ATCA2,Atriplex canescens,"saltbush, Fourwing",Shrub,NA,NA,NA,NA,NA,NA,8,0.015807,0.502,8,0.013398,0.6233,10,0.003197,0.12,NA,2005
+ARDR4,Artemisia dracunculus,Tarragon,Herb,NA,NA,NA,NA,NA,NA,9,0.013285,0.31,NA,NA,NA,NA,NA,NA,NA,2005
+ROWO,Rosa woodsii,"rose, Wood's",Shrub,NA,NA,NA,NA,NA,NA,10,0.008841,0.23,7,0.021576,1.22,14,0.001598,0.06,NA,2005
+IVAX,Iva axillaris,"weed, Poverty",Herb,NA,NA,NA,NA,NA,NA,11,0.007713,0.2225,9,0.012406,0.451,NA,NA,NA,NA,2005
+GLLE3,Glycyrrhiza lepidota,"licorice, American",Herb,NA,NA,NA,NA,NA,NA,14,0.00474,0.15,10,0.01233,0.525,6,0.013319,0.5,NA,2005
+TARA,Tamarix ramosissima,"cedar, Salt",Shrub,NA,NA,NA,NA,NA,NA,NA,NA,NA,13,0.006201,0.31,7,0.00666,0.25,NA,2005

@@ -1,0 +1,1 @@
+{"type": "FeatureCollection", "name": "IND026_representative_photo_point_wgs84", "features": [{"type": "Feature", "properties": {"IDENT": "IND026_05_212", "OBJECTID": 1077, "role": "representative_photo", "Parcel": "IND026", "TRANSECT": 5, "BEARING": 212, "visit_date_iso": "2024-07-02"}, "geometry": {"type": "Point", "coordinates": [-118.23210617551, 36.8683979323461]}}]}

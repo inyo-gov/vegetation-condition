@@ -1,0 +1,47 @@
+{
+  "parcel": "IND026",
+  "crs_bounds": "EPSG:4326",
+  "bounds_wgs84": {
+    "west": -118.23706706615839,
+    "south": 36.864368821671285,
+    "east": -118.22459756517526,
+    "north": 36.87348627278577
+  },
+  "width": 2249,
+  "height": 1995,
+  "res_m": [
+    0.5,
+    0.5
+  ],
+  "hillshade_params": {
+    "z": 2,
+    "az": 315,
+    "alt": 45,
+    "match": "BWMA stage_hillshade"
+  },
+  "pad_m_requested": 300.0,
+  "pad_m_achieved": {
+    "W": 157.1246665387298,
+    "S": 300.0,
+    "E": 285.5233541614143,
+    "N": 147.871881717816
+  },
+  "pad_note": "Requested 300 m adjoining-context pad; clipped to ind026_ind029_2022 DTM extract extent (W/N limited by extract).",
+  "dtm_epoch": "2022 Sierra (CA_FEMAR9Southeast)",
+  "adjoining_parcels": [
+    "BLK098",
+    "IND023",
+    "IND024",
+    "IND025",
+    "IND027",
+    "IND028",
+    "IND029",
+    "IND030",
+    "IND032",
+    "IND204"
+  ],
+  "n_all2026_starts": 16,
+  "built": "2026-09-30T16:11:48-07:00",
+  "preview_png": "IND026_hillshade_preview.png",
+  "context_overlay_png": "IND026_hillshade_context_overlay.png"
+}

@@ -1,0 +1,32 @@
+period,year_or_years,n_visits,species_code,scientific,common,cover_abs_mean,cover_rel_perennial,rank,lifecycle,lifeform
+baseline,1985,1,SPAI,Sporobolus airoides,"sacaton, Alkali",49,1,1,Perennial,Grass
+2000s,2005;2006;2007;2008;2009,5,ATTO,Atriplex torreyi,"saltbush, Nevada/Torrey's",16.416,0.5224599182706396,1,Perennial,Shrub
+2000s,2005;2006;2007;2008;2009,5,ARTR2,Artemisia tridentata,"sagebrush, Big",6.036,0.19911748031326643,2,Perennial,Shrub
+2000s,2005;2006;2007;2008;2009,5,ERNA10,Ericameria nauseosa,"rabbitbrush, Common",2.05,0.06741630430003764,3,Perennial,Shrub
+2000s,2005;2006;2007;2008;2009,5,SPAI,Sporobolus airoides,"sacaton, Alkali",1.868,0.06458272537476722,4,Perennial,Grass
+2000s,2005;2006;2007;2008;2009,5,ATPO,Atriplex polycarpa,"saltbush, Allscale",1.1800000000000002,0.03500852294583392,5,Perennial,Shrub
+2000s,2005;2006;2007;2008;2009,5,DISP,Distichlis spicata,Saltgrass,0.72,0.023955424179619794,6,Perennial,Grass
+2000s,2005;2006;2007;2008;2009,5,SALA3,Salix laevigata,"willow, Red",0.56,0.01653839788019859,7,Perennial,Tree
+2000s,2005;2006;2007;2008;2009,5,ATCA2,Atriplex canescens,"saltbush, Fourwing",0.502,0.015807321979198683,8,Perennial,Shrub
+2000s,2005;2006;2007;2008;2009,5,ARDR4,Artemisia dracunculus,Tarragon,0.31,0.013285036496335445,9,Perennial,Herb
+2000s,2005;2006;2007;2008;2009,5,ROWO,Rosa woodsii,"rose, Wood's",0.23,0.008840709991041893,10,Perennial,Shrub
+2010s,2010;2011;2012;2013;2014;2015;2016;2017;2018;2019,10,ATTO,Atriplex torreyi,"saltbush, Nevada/Torrey's",14.574,0.3583609125427079,1,Perennial,Shrub
+2010s,2010;2011;2012;2013;2014;2015;2016;2017;2018;2019,10,ARTR2,Artemisia tridentata,"sagebrush, Big",11.139,0.27341610623242085,2,Perennial,Shrub
+2010s,2010;2011;2012;2013;2014;2015;2016;2017;2018;2019,10,ERNA10,Ericameria nauseosa,"rabbitbrush, Common",3.313,0.08220536458567856,3,Perennial,Shrub
+2010s,2010;2011;2012;2013;2014;2015;2016;2017;2018;2019,10,SPAI,Sporobolus airoides,"sacaton, Alkali",2.7359999999999998,0.06786683251235769,4,Perennial,Grass
+2010s,2010;2011;2012;2013;2014;2015;2016;2017;2018;2019,10,ATPO,Atriplex polycarpa,"saltbush, Allscale",2.2422222222222223,0.0537196234867081,5,Perennial,Shrub
+2010s,2010;2011;2012;2013;2014;2015;2016;2017;2018;2019,10,DISP,Distichlis spicata,Saltgrass,1.526,0.038772577303925214,6,Perennial,Grass
+2010s,2010;2011;2012;2013;2014;2015;2016;2017;2018;2019,10,ROWO,Rosa woodsii,"rose, Wood's",1.22,0.02157613749040515,7,Perennial,Shrub
+2010s,2010;2011;2012;2013;2014;2015;2016;2017;2018;2019,10,ATCA2,Atriplex canescens,"saltbush, Fourwing",0.6233333333333333,0.013398494763565808,8,Perennial,Shrub
+2010s,2010;2011;2012;2013;2014;2015;2016;2017;2018;2019,10,IVAX,Iva axillaris,"weed, Poverty",0.451,0.012405629384977674,9,Perennial,Herb
+2010s,2010;2011;2012;2013;2014;2015;2016;2017;2018;2019,10,GLLE3,Glycyrrhiza lepidota,"licorice, American",0.525,0.012329948360645233,10,Perennial,Herb
+current,2026,1,ARTR2,Artemisia tridentata,"sagebrush, Big",17.12,0.456046883324454,1,Perennial,Shrub
+current,2026,1,ATTO,Atriplex torreyi,"saltbush, Nevada/Torrey's",10.06,0.26798082045817795,2,Perennial,Shrub
+current,2026,1,ERNA10,Ericameria nauseosa,"rabbitbrush, Common",4.31,0.1148108684070325,3,Perennial,Shrub
+current,2026,1,SPAI,Sporobolus airoides,"sacaton, Alkali",3.56,0.09483217900905702,4,Perennial,Grass
+current,2026,1,ATPO,Atriplex polycarpa,"saltbush, Allscale",1,0.026638252530633993,5,Perennial,Shrub
+current,2026,1,GLLE3,Glycyrrhiza lepidota,"licorice, American",0.5,0.013319126265316996,6,Perennial,Herb
+current,2026,1,TARA,Tamarix ramosissima,"cedar, Salt",0.25,0.006659563132658498,7,Perennial,Shrub
+current,2026,1,DISP,Distichlis spicata,Saltgrass,0.19,0.005061267980820459,8,Perennial,Grass
+current,2026,1,SALA3,Salix laevigata,"willow, Red",0.19,0.005061267980820459,9,Perennial,Tree
+current,2026,1,ATCA2,Atriplex canescens,"saltbush, Fourwing",0.12,0.003196590303676079,10,Perennial,Shrub

@@ -1,13 +1,13 @@
 ---
-title: "Green Book Section I.C.1.a Parcel Profiles"
-subtitle: "QA/QC — Wellfield Parcels Below Baseline"
+title: "Green Book Section I.C.1.a — Flagged parcels"
+subtitle: "I.C.1.a flagged wellfield profiles — percentile framing, DTW context, and composition"
 author: "Inyo County Water Department"
-date: "`r Sys.Date()`"
+date: last-modified
 format:
   html:
     toc: true
     toc-depth: 3
-    number-sections: true
+    number-sections: false
 ---
 
 ```{r setup, include=FALSE, warning=FALSE, message=FALSE}
@@ -29,6 +29,7 @@ options(tidyverse.quiet = TRUE)
 # Same pattern as index.qmd: source report helpers and load targets
 source(here("code", "R", "targets_functions.R"))
 source(here("code", "R", "report_functions.R"))
+source(here("code", "R", "flagged_parcel_context.R"))
 
 targets <- c(
   "cYear",
@@ -46,7 +47,13 @@ targets <- c(
   "lakes_shp",
   "attributes_pfix"
 )
-withr::with_dir(rprojroot::find_root("_targets.R"), tar_load(targets))
+withr::with_dir(rprojroot::find_root("_targets.R"), {
+  # rs_pfix is optional — rebuild from parcel_timeseries_app CSV if store object is missing
+  req <- setdiff(targets, "rs_pfix")
+  tar_load(req)
+  tryCatch(tar_load("rs_pfix"), error = function(e)
+    message("Optional target rs_pfix not loaded: ", e$message))
+})
 
 # Create parcel-pumping linkage once (cached) for parcel profiles
 pumping_linkage <- NULL
@@ -64,26 +71,116 @@ if (exists("create_parcel_pumping_linkage")) {
 } else {
   message("Pumping linkage function not available; skipping pumping summaries.")
 }
+
+# App timeseries with Annual_native / Annual_nonnative (same feed as AOP dashboard)
+ts_app_path <- here::here("data", "parcel_timeseries_app.csv")
+# Prefer current-year export when present
+for (cand in c(
+  here::here("data", paste0("parcel_timeseries_app_", cYear, ".csv")),
+  here::here("data", "parcel_timeseries_app_2026.csv"),
+  ts_app_path
+)) {
+  if (file.exists(cand)) {
+    ts_app_path <- cand
+    break
+  }
+}
+parcel_ts_app <- if (file.exists(ts_app_path)) {
+  readr::read_csv(ts_app_path, show_col_types = FALSE)
+} else {
+  tibble::tibble()
+}
+
+# Percentile framing (precomputed by targets, or on-the-fly from app timeseries)
+source(here("code", "R", "measurability_percentiles.R"))
+source(here("code", "R", "measurability_ndvi.R"))
+pct_summary_path <- here::here("output", "parcel_percentile_summary_flagged.csv")
+if (file.exists(pct_summary_path)) {
+  parcel_pct_summary <- readr::read_csv(pct_summary_path, show_col_types = FALSE)
+} else if (nrow(parcel_ts_app) > 0) {
+  parcel_pct_summary <- summarize_parcel_percentiles(
+    parcel_metric_percentiles(parcel_ts_app),
+    cYear = if (exists("cYear")) cYear else NULL
+  )
+} else {
+  parcel_pct_summary <- tibble::tibble()
+}
+
+nmds_index_path <- here::here("output", "nmds_flagged_parcels_index.csv")
+nmds_index <- if (file.exists(nmds_index_path)) {
+  readr::read_csv(nmds_index_path, show_col_types = FALSE)
+} else {
+  tibble::tibble(Parcel = character(), nmds_ok = logical(), figure = character())
+}
+
+# rs_pfix may be missing from a stale targets store — rebuild NDVI panel feed from app CSV
+if (!exists("rs_pfix") || is.null(rs_pfix) || !is.data.frame(rs_pfix) || nrow(rs_pfix) == 0) {
+  if (nrow(parcel_ts_app) > 0 && "NDVI_SUR" %in% names(parcel_ts_app)) {
+    rs_pfix <- parcel_ts_app %>%
+      dplyr::transmute(
+        Parcel = .data$Parcel,
+        Year = as.integer(.data$Year),
+        NDVI_SUR = .data$NDVI_SUR
+      ) %>%
+      dplyr::filter(is.finite(.data$NDVI_SUR))
+    message("rs_pfix rebuilt from ", basename(ts_app_path))
+  } else {
+    rs_pfix <- tibble::tibble(Parcel = character(), Year = integer(), NDVI_SUR = double())
+    message("rs_pfix unavailable; NDVI panels will be empty")
+  }
+}
+
+# Baseline is parcel-specific. Use the recorded inventory/baseline year rather
+# than NominalYear, which can collapse an actual 1987 inventory to 1986.
+profile_baseline_year <- function(parcel_id) {
+  attr <- attributes_pfix %>%
+    dplyr::filter(.data$Parcel == parcel_id) %>%
+    dplyr::slice(1)
+  candidates <- c(
+    if ("Baseline" %in% names(attr)) attr$Baseline else NA,
+    if ("bl.Year.tran" %in% names(attr)) attr$`bl.Year.tran` else NA
+  )
+  years <- suppressWarnings(as.integer(as.character(candidates)))
+  years <- years[is.finite(years)]
+  if (length(years) > 0) years[[1]] else NA_integer_
+}
 ```
 
-## Purpose
+I.C.1.a flagged wellfield parcels (`Cover_sig.counter > 5` or `Grass_sig.counter > 5`). Profiles summarize measurable change vs the 1984–1987 baseline — not cause. Full attributability: [I.C.1.b](https://icwd-attributability.vercel.app).
 
-This page provides **QA/QC output** of parcel-level profiles for **wellfield parcels** that are **chronically below baseline**: cover and/or grass has been below baseline for **more than 5 consecutive years** (`Cover_sig.counter` or `Grass_sig.counter` \> 5). Control parcels are excluded. Profiles summarize parcel attributes, significance counters, proportional grass change, and time-series trajectories for cover, grass, and shrub.
+<details class="section-fold">
+<summary><strong>How to interpret a profile</strong></summary>
 
-Parcels are organized by **wellfield, north to south**: **Laws**, **Control**, **Big Pine**, **Taboose-Aberdeen**, **Thibaut Sawmill**, **Independence Oak**, **Symmes Shepherd**, **Bairs Georges**. Control parcels are located throughout the valley, just outside the zone of pumping influence.
+Wellfield parcels below are I.C.1.a flagged when `Cover_sig.counter > 5` or `Grass_sig.counter > 5` (more than five consecutive years statistically below baseline for total perennial cover or grass). This is a sustained measurable flag under I.C.1.a—not a diagnosis of cause, and not Agreement “significance” under I.C.1.c. Profiles lead with percentile framing (current and baseline years ranked within each parcel’s own time series) and a valley-floor NMDS year path with that parcel’s mapped Green Book TYPE baseline cloud. NMDS distances represent movement through species-composition space (composition geometry / evidence only — not control matching); this informs the evidence picture without serving as the sole I.C.1.a gate. Screening is parcel-by-parcel; questions of causation belong to [I.C.1.b attributability analysis](https://icwd-attributability.vercel.app).
 
-For On/Off pumping management and soil‑moisture thresholds, see the **Soil‑Plant Water Balance and Groundwater** page: <https://inyo-gov.github.io/pumping-management/>.
+1. **Measurability:** the orange I.C.1.a flag marks a sustained statistical decrease in perennial cover or grass relative to the parcel's baseline.
+2. **Support / Not supported (sequential):** Support = decline evidence only — cover↓ and/or grass↓ vs baseline, and/or shrub↑ vs baseline (each metric gated independently; not all required). Sustained counters and percentile rows use the same sign gate. Grass↑, shrub↓, and high grass / still-Type-C proportions go to Not supported (type-stable / contrary). Shown one after the other — not attributability or cause findings.
+3. **Hydrologic context:** DTW and precipitation describe water-table and climate conditions. A deeper water table may warrant further attributability analysis; a shallower water table does not by itself establish or rule out causation.
+4. **Vegetation and composition:** NDVI is a chlorophyll-related vegetation index (Jul–Sep window noted under the NDVI table). NMDS maps the parcel’s year path on the shared valley-floor plane against its mapped TYPE baseline cloud; percentile summaries and lifeform proportions add complementary evidence. NMDS informs the evidence picture but is not the sole I.C.1.a gate.
 
-## Parcel order
+The Technical Group may refine methods as field techniques, technology, and analytical understanding develop under Box I.C.1.a.ii.
 
-Profiled parcels are ordered by wellfield (north to south) as above, then by latitude (northern parcels first) within each group. For **all** parcels and filters (e.g. Cover_Yrs or Grass_Yrs \> 0), see the [Annual Summary](index.qmd) parcel table. For a map of parcels, see [Annual Summary](index.qmd#fig-gbtype-interactive-map).
+<details class="section-fold">
+<summary><strong>Parcel order</strong> — north→south wellfields (optional)</summary>
 
-## Parcel Profiles (Wellfield Parcels Chronic Below Baseline — Cover or Grass \> 5 Years)
+Ordered by wellfield, then latitude within wellfield. Full table: [Evaluate change](index.qmd). Map: [Evaluate change — map](index.qmd#map).
 
-```{r parcel-profiles, results='asis'}
-old_opts <- knitr::opts_chunk$get()
-knitr::opts_chunk$set(fig.height = 26, fig.width = 30, out.width = "100%", fig.align = "center")
-on.exit(knitr::opts_chunk$set(old_opts), add = TRUE)
+</details>
+
+</details>
+
+## Parcel profiles
+
+```{r parcel-profiles, results='asis', fig.height=15, fig.width=11, dpi=120, out.width="100%", fig.align="center"}
+# Ensure every plot in this asis loop uses the tall stacked layout
+# (opts_chunk$set alone does not resize figures emitted from this same chunk).
+knitr::opts_current$set(
+  fig.height = 15,
+  fig.width = 11,
+  dpi = 120,
+  out.width = "100%",
+  fig.align = "center"
+)
 
 # Wellfield order north to south (Control = reference parcels throughout valley)
 wellfield_order <- c(
@@ -123,12 +220,12 @@ profile_parcels <- profile_parcels %>%
   ) %>%
   arrange(wellfield_group, desc(.y_ord), Parcel) %>%
   select(-.y_ord, Parcel, wellfield_group, wellfield, Type, GB_TYPE, everything()) %>%
-  head(16)
+  head(24)
 
 if (nrow(profile_parcels) == 0) {
-  cat("No wellfield parcels meet the chronic criterion (cover or grass below baseline for more than 5 years).")
+  cat("No wellfield parcels meet the I.C.1.a flagged rule (cover or grass statistically below baseline for more than 5 years).")
 } else {
-  cat("Profiling **", nrow(profile_parcels), "** wellfield parcels chronic below baseline (cover or grass below baseline for more than 5 years).\n\n", sep = "")
+  cat("Profiling **", nrow(profile_parcels), "** wellfield parcels on the I.C.1.a flagged list (cover or grass statistically below baseline for more than 5 years).\n\n", sep = "")
 }
 
 last_year_if_nonneg <- function(year, delta) {
@@ -146,308 +243,1126 @@ last_year_from_counter <- function(counter) {
   cYear - counter
 }
 
-build_parcel_notes <- function(parcel_id) {
+# Status badges: DTW OK; shrub ≥80% / grass:shrub cutpoint — Type C only (not Type B)
+parcel_gb_type <- function(parcel_id) {
+  row <- deltas_ttest_att %>% filter(Parcel == parcel_id) %>% slice(1)
+  if (nrow(row) == 0 || !"GB_TYPE" %in% names(row)) return(NA_character_)
+  toupper(gsub("[^A-Z/]", "", as.character(row$GB_TYPE[[1]])))
+}
+
+type_c_shrub_flag_applies <- function(gb) {
+  gb <- toupper(as.character(gb))
+  gb %in% c("C", "AC", "A/C", "CA")
+}
+
+parcel_status_flags <- function(parcel_id) {
+  gb <- parcel_gb_type(parcel_id)
+  baseline_year <- profile_baseline_year(parcel_id)
+  dtw_current <- dtw_pfix %>%
+    filter(Parcel == parcel_id, Year == cYear) %>%
+    summarise(DTW = mean(DTW, na.rm = TRUE), .groups = "drop") %>%
+    pull(DTW)
+  dtw_baseline <- dtw_pfix %>%
+    filter(Parcel == parcel_id, Year == baseline_year) %>%
+    summarise(DTW = mean(DTW, na.rm = TRUE), .groups = "drop") %>%
+    pull(DTW)
+
+  dtw_comparable <- is.finite(dtw_current) && is.finite(dtw_baseline)
+  dtw_ok <- dtw_comparable && dtw_current < dtw_baseline
+  dtw_deeper <- dtw_comparable && dtw_current >= dtw_baseline
+
+  props <- parcels_deltas %>%
+    filter(Parcel == parcel_id, NominalYear == cYear) %>%
+    slice(1)
+  if (nrow(props) == 0) {
+    props <- deltas_ttest_att %>% filter(Parcel == parcel_id) %>% slice(1)
+  }
+  p_shrub <- NA_real_
+  p_grass <- NA_real_
+  if (nrow(props) > 0) {
+    if ("pShrub" %in% names(props) && is.finite(props$pShrub[[1]])) {
+      p_shrub <- props$pShrub[[1]]
+    } else if (all(c("Shrub", "Cover") %in% names(props)) &&
+               is.finite(props$Cover[[1]]) && props$Cover[[1]] > 0) {
+      p_shrub <- props$Shrub[[1]] / props$Cover[[1]]
+    }
+    if ("pGrass" %in% names(props) && is.finite(props$pGrass[[1]])) {
+      p_grass <- props$pGrass[[1]]
+    }
+  }
+  # Prefer perennial stack share when grass+shrub+herb available
+  if (nrow(props) > 0 && all(c("pGrass", "pShrub", "pHerb") %in% names(props))) {
+    g <- dplyr::coalesce(props$pGrass[[1]], 0)
+    s <- dplyr::coalesce(props$pShrub[[1]], 0)
+    h <- dplyr::coalesce(props$pHerb[[1]], 0)
+    tot <- g + s + h
+    if (is.finite(tot) && tot > 0) {
+      p_shrub <- s / tot
+      p_grass <- g / tot
+    }
+  }
+
+  shrub_ge_80_raw <- is.finite(p_shrub) && p_shrub >= 0.8
+  # Grass:shrub cutpoint ~0.2 grass share (Type C→B reference).
+  grass_below_02_raw <- is.finite(p_grass) && p_grass < 0.2
+  hist <- parcels_deltas %>%
+    filter(Parcel == parcel_id,
+           (is.na(baseline_year) | Year > baseline_year),
+           is.finite(pShrub)) %>%
+    mutate(
+      tot = dplyr::coalesce(pGrass, 0) + dplyr::coalesce(pShrub, 0) + dplyr::coalesce(pHerb, 0),
+      p_s = ifelse(tot > 0, dplyr::coalesce(pShrub, 0) / tot, pShrub),
+      p_g = ifelse(tot > 0, dplyr::coalesce(pGrass, 0) / tot, pGrass)
+    )
+  shrub_ever_80 <- nrow(hist) > 0 && any(hist$p_s >= 0.8, na.rm = TRUE)
+  grass_ever_below_02 <- nrow(hist) > 0 && any(hist$p_g < 0.2, na.rm = TRUE)
+
+  applies <- type_c_shrub_flag_applies(gb)
+  dtw_threshold <- dplyr::case_when(
+    applies ~ 6,
+    identical(gb, "B") ~ 12,
+    TRUE ~ NA_real_
+  )
+  dtw_attention <- isTRUE(dtw_deeper) && is.finite(dtw_threshold) &&
+    is.finite(dtw_current) && dtw_current > dtw_threshold
+  cover_delta <- if ("Cover.Delta" %in% names(props)) props$Cover.Delta[[1]] else NA_real_
+  grass_delta <- if ("Grass.Delta" %in% names(props)) props$Grass.Delta[[1]] else NA_real_
+  percentile_for <- function(metric) {
+    if (!exists("parcel_pct_summary", inherits = TRUE) ||
+        !is.data.frame(parcel_pct_summary)) return(NA_real_)
+    hit <- parcel_pct_summary %>%
+      dplyr::filter(.data$Parcel == parcel_id, .data$metric == metric) %>%
+      dplyr::slice(1)
+    if (nrow(hit) == 0) NA_real_ else hit$current_percentile[[1]]
+  }
+  list(
+    dtw_ok = isTRUE(dtw_ok),
+    dtw_deeper = isTRUE(dtw_deeper),
+    dtw_comparable = isTRUE(dtw_comparable),
+    dtw_current = dtw_current,
+    dtw_baseline = dtw_baseline,
+    dtw_delta = if (isTRUE(dtw_comparable)) dtw_current - dtw_baseline else NA_real_,
+    dtw_threshold = dtw_threshold,
+    dtw_attention = isTRUE(dtw_attention),
+    cover_delta = cover_delta,
+    grass_delta = grass_delta,
+    cover_percentile = percentile_for("Cover"),
+    grass_percentile = percentile_for("Grass"),
+    cover_flagged = FALSE,
+    gb_type = gb,
+    shrub_flag_applies = applies,
+    shrub_ge_80 = applies && isTRUE(shrub_ge_80_raw),
+    shrub_ge_80_raw = isTRUE(shrub_ge_80_raw),
+    shrub_ever_80 = applies && isTRUE(shrub_ever_80),
+    grass_cutpoint_flag = applies && isTRUE(grass_below_02_raw),
+    grass_cutpoint_raw = isTRUE(grass_below_02_raw),
+    grass_ever_below_02 = applies && isTRUE(grass_ever_below_02),
+    p_shrub = p_shrub,
+    p_grass = p_grass
+  )
+}
+
+format_parcel_badges <- function(flags) {
+  # Three public-facing status cards: change rank, hydrologic context, and composition.
+  esc <- function(x) {
+    x <- gsub("&", "&amp;", x, fixed = TRUE)
+    x <- gsub("<", "&lt;", x, fixed = TRUE)
+    x <- gsub(">", "&gt;", x, fixed = TRUE)
+    x
+  }
+  num <- function(x, digits = 1) {
+    if (length(x) == 0 || !is.finite(x)) return("—")
+    formatC(round(x, digits), format = "f", digits = digits)
+  }
+  delta <- function(x) {
+    if (length(x) == 0 || !is.finite(x)) return(NULL)
+    paste0(sprintf("%+.1f", x), " pp")
+  }
+  ordinal <- function(x) {
+    if (length(x) == 0 || !is.finite(x)) return(NULL)
+    n <- round(x)
+    suffix <- if (n %% 100 %in% 11:13) "th" else switch(as.character(n %% 10),
+      "1" = "st", "2" = "nd", "3" = "rd", "th")
+    paste0(n, suffix)
+  }
+
+  change_bits <- c(
+    if (is.finite(flags$cover_delta)) paste0("Cover ", delta(flags$cover_delta)) else NULL,
+    if (is.finite(flags$grass_delta)) paste0("Grass ", delta(flags$grass_delta)) else NULL
+  )
+  pct_bits <- c(
+    if (is.finite(flags$cover_percentile)) paste0("Cover ", ordinal(flags$cover_percentile)) else NULL,
+    if (is.finite(flags$grass_percentile)) paste0("Grass ", ordinal(flags$grass_percentile)) else NULL
+  )
+  pct_text <- if (length(pct_bits) == 2 &&
+                  identical(ordinal(flags$cover_percentile), ordinal(flags$grass_percentile))) {
+    paste0(ordinal(flags$cover_percentile), " percentile")
+  } else if (length(pct_bits)) {
+    paste(pct_bits, collapse = " · ")
+  } else NULL
+  change_label <- paste(c(change_bits, pct_text), collapse = " · ")
+  if (!nzchar(change_label)) change_label <- "Vegetation change unavailable"
+  change_cls <- if (length(change_bits)) "parcel-badge is-bad" else "parcel-badge is-na"
+
+  dtw_direction <- if (is.finite(flags$dtw_delta) && flags$dtw_delta < 0) " (shallower)" else if (is.finite(flags$dtw_delta) && flags$dtw_delta > 0) " (deeper)" else ""
+  if (isTRUE(flags$dtw_attention)) {
+    dtw_cls <- "parcel-badge is-bad"
+    dtw_label <- paste0(
+      "DTW ", num(flags$dtw_current, 2), " ft BGS · ",
+      sprintf("%+.2f", flags$dtw_delta), " vs baseline", dtw_direction, " · Type ",
+      dplyr::coalesce(flags$gb_type, "?"), " >", num(flags$dtw_threshold, 0), " ft"
+    )
+  } else if (isTRUE(flags$dtw_comparable)) {
+    dtw_cls <- "parcel-badge is-good"
+    dtw_label <- paste0(
+      "DTW ", num(flags$dtw_current, 2), " ft BGS · ",
+      sprintf("%+.2f", flags$dtw_delta), " vs baseline", dtw_direction
+    )
+  } else {
+    dtw_cls <- "parcel-badge is-na"
+    dtw_label <- "DTW unavailable"
+  }
+
+  shrub_pct <- if (is.finite(flags$p_shrub)) paste0(num(100 * flags$p_shrub, 0), "%") else "—"
+  grass_pct <- if (is.finite(flags$p_grass)) paste0(num(100 * flags$p_grass, 0), "%") else "—"
+  shrub_cls <- if (is.finite(flags$p_shrub)) {
+    if (flags$p_shrub > 0.8) "parcel-badge is-bad" else "parcel-badge is-good"
+  } else "parcel-badge is-na"
+  shrub_label <- paste0("Shrub ", shrub_pct, " · Grass ", grass_pct)
+  if (isTRUE(flags$shrub_flag_applies)) shrub_label <- paste0(shrub_label, " · Type C→B >80% screen")
+
+  card <- function(cls, label, aria) sprintf(
+    '<span class="%s" role="status" aria-label="%s"><span class="badge-icon" aria-hidden="true">●</span><span class="badge-copy">%s</span></span>',
+    cls, esc(aria), esc(label)
+  )
+  # Status tiles share the same card chrome as Support / Not supported.
+  tile <- function(tone, label, aria) {
+    tone <- match.arg(tone, c("bad", "good", "na"))
+    sprintf(
+      paste0(
+        '<article class="parcel-card parcel-status-tile is-%s" role="status" aria-label="%s">',
+        '<span class="badge-icon" aria-hidden="true">●</span>',
+        '<span class="badge-copy">%s</span></article>'
+      ),
+      tone, esc(aria), esc(label)
+    )
+  }
+  paste0(
+    '<div class="parcel-status-row">',
+    tile(sub("^parcel-badge is-", "", change_cls), change_label, paste("I.C.1.a", change_label)),
+    tile(sub("^parcel-badge is-", "", dtw_cls), dtw_label, dtw_label),
+    tile(sub("^parcel-badge is-", "", shrub_cls), shrub_label, shrub_label),
+    "</div>\n"
+  )
+}
+
+escape_html <- function(x) {
+  x <- gsub("&", "&amp;", x, fixed = TRUE)
+  x <- gsub("<", "&lt;", x, fixed = TRUE)
+  x <- gsub(">", "&gt;", x, fixed = TRUE)
+  x
+}
+
+card_list_html <- function(items) {
+  items <- items[!is.na(items) & nzchar(items)]
+  if (length(items) == 0) {
+    return("<p class=\"parcel-card-empty\">No items yet.</p>\n")
+  }
+  paste0(
+    "<ul class=\"parcel-card-list parcel-next-steps\">\n",
+    paste0("  <li><p class=\"next-step-text\">", escape_html(items), "</p></li>", collapse = "\n"),
+    "\n</ul>\n"
+  )
+}
+
+# Two-column cards: Support for measurable change | Next steps
+# Optional third card: Support for stable vegetation type (when composition supports type stability)
+build_parcel_cards <- function(parcel_id) {
+  baseline_year <- profile_baseline_year(parcel_id)
+  baseline_label <- if (is.finite(baseline_year)) {
+    paste0(baseline_year, " baseline measurement")
+  } else {
+    "recorded baseline"
+  }
   current <- deltas_ttest_att %>%
     filter(Parcel == parcel_id) %>%
     slice(1)
 
   if (nrow(current) == 0) {
-    return(c("No summary data available for this parcel."))
+    return("<p>No summary data available for this parcel.</p>\n")
   }
 
+  flags <- parcel_status_flags(parcel_id)
   type_label <- current$GB_TYPE
   wf_label <- current$Type
   wf_name <- if (!is.null(current$wellfield) && !is.na(current$wellfield)) current$wellfield else "Unknown"
+  gb <- parcel_gb_type(parcel_id)
 
   cover_delta <- round(current$Cover.Delta, 1)
   grass_delta <- round(current$Grass.Delta, 1)
   shrub_delta <- round(current$Shrub.Delta, 1)
-  pgrass_pct <- if (!is.na(current$pGrass)) round(current$pGrass * 100, 2) else NA_real_
+  pgrass_pct <- if (!is.na(current$pGrass)) round(current$pGrass * 100, 1) else NA_real_
+  pshrub_pct <- if (!is.na(current$pShrub)) round(current$pShrub * 100, 1) else NA_real_
 
-  ts_full <- parcels_deltas %>%
-    filter(Parcel == parcel_id) %>%
-    select(NominalYear, Cover, Grass, Shrub, Cover.Delta, Grass.Delta, Shrub.Delta)
-
-  first_year <- ts_full %>%
-    filter(!is.na(Cover) | !is.na(Grass) | !is.na(Shrub)) %>%
-    summarise(year = min(NominalYear, na.rm = TRUE), .groups = "drop") %>%
-    pull(year)
-
-  yoy_vals <- parcels_deltas %>%
-    filter(Parcel == parcel_id, NominalYear %in% c(cYear, cYear - 1)) %>%
-    arrange(NominalYear) %>%
-    summarise(
-      yoy_grass = diff(Grass),
-      yoy_cover = diff(Cover),
-      yoy_pgrass = diff(pGrass),
-      .groups = "drop"
-    )
-  yoy_grass <- if (nrow(yoy_vals) == 0 || all(is.na(yoy_vals))) NA_real_ else round(yoy_vals$yoy_grass[1], 1)
-  yoy_cover <- if (nrow(yoy_vals) == 0 || all(is.na(yoy_vals))) NA_real_ else round(yoy_vals$yoy_cover[1], 1)
-  yoy_pgrass <- if (nrow(yoy_vals) == 0 || all(is.na(yoy_vals))) NA_real_ else round(yoy_vals$yoy_pgrass[1], 2)
+  cover_yrs <- dplyr::coalesce(current$Cover_sig.counter, 0)
+  grass_yrs <- dplyr::coalesce(current$Grass_sig.counter, 0)
 
   dtw_current <- dtw_pfix %>%
     filter(Parcel == parcel_id, Year == cYear) %>%
     summarise(DTW = mean(DTW, na.rm = TRUE), .groups = "drop") %>%
     pull(DTW)
-
   dtw_baseline <- dtw_pfix %>%
-    filter(Parcel == parcel_id, Year %in% 1984:1986) %>%
+    filter(Parcel == parcel_id, Year == baseline_year) %>%
     summarise(DTW = mean(DTW, na.rm = TRUE), .groups = "drop") %>%
     pull(DTW)
 
-  cover_yrs <- dplyr::coalesce(current$Cover_sig.counter, 0)
-  grass_yrs <- dplyr::coalesce(current$Grass_sig.counter, 0)
-
-  last_cover <- last_year_from_counter(cover_yrs)
-  last_grass <- last_year_from_counter(grass_yrs)
-  last_shrub <- last_year_if_nonneg(ts_full$NominalYear, ts_full$Shrub.Delta)
-
-  below_types <- c(
-    if (cover_yrs > 0) "Cover" else NULL,
-    if (grass_yrs > 0) "Grass" else NULL,
-    if (!is.na(current$Shrub.Delta) && current$Shrub.Delta < 0) "Shrub" else NULL
-  )
-  below_text <- if (length(below_types) > 0) {
-    paste("Below baseline (current year):", paste(below_types, collapse = ", "))
-  } else {
-    "Below baseline (current year): none"
+  ndvi_now <- NA_real_
+  ndvi_base <- NA_real_
+  ndvi_row <- rs_pfix %>%
+    filter(Parcel == parcel_id, Year %in% c(baseline_year, cYear)) %>%
+    group_by(Year) %>%
+    summarise(NDVI = mean(NDVI_SUR, na.rm = TRUE), .groups = "drop")
+  if (any(ndvi_row$Year == baseline_year)) ndvi_base <- ndvi_row$NDVI[ndvi_row$Year == baseline_year][1]
+  if (any(ndvi_row$Year == cYear)) ndvi_now <- ndvi_row$NDVI[ndvi_row$Year == cYear][1]
+  # Fallbacks when targets store lacks current year: use recent mean from series
+  if (!is.finite(ndvi_now)) {
+    ndvi_recent <- rs_pfix %>%
+      filter(Parcel == parcel_id, Year >= cYear - 2) %>%
+      summarise(NDVI = mean(NDVI_SUR, na.rm = TRUE), .groups = "drop") %>%
+      pull(NDVI)
+    if (length(ndvi_recent) == 1 && is.finite(ndvi_recent)) ndvi_now <- ndvi_recent
   }
 
-  format_last <- function(label, last_year, counter) {
-    if (is.na(counter) || counter <= 0) {
-      return(NULL)
+  # Structured evidence cards: each comparison stays aligned by metric rather than prose.
+  support_evidence <- list()
+  not_supported_evidence <- list()
+  next_steps <- c()
+  stable_type <- c()
+  fmt_num <- function(x, digits = 1) {
+    if (length(x) == 0 || !is.finite(x)) return("—")
+    formatC(round(x, digits), format = "f", digits = digits)
+  }
+  fmt_delta <- function(x, digits = 1, suffix = "") {
+    if (length(x) == 0 || !is.finite(x)) return("—")
+    paste0(sprintf(paste0("%+.", digits, "f"), x), suffix)
+  }
+  pull_num <- function(name) {
+    if (!name %in% names(current)) return(NA_real_)
+    val <- suppressWarnings(as.numeric(current[[name]][1]))
+    if (length(val) == 0 || !is.finite(val)) NA_real_ else val
+  }
+  row_simple <- function(label, value, note = NULL) {
+    paste0(
+      '<div class="evidence-row"><span class="evidence-label">', escape_html(label),
+      '</span><span class="evidence-current evidence-wide">', escape_html(value),
+      if (!is.null(note)) paste0('<small>', escape_html(note), '</small>') else "",
+      '</span></div>'
+    )
+  }
+  # Accounting-style ledger: current | baseline | Δ (Δ is the result column).
+  ledger_table <- function(rows, digits = 1, delta_digits = 1, delta_suffix = "",
+                           current_suffix = "", baseline_suffix = current_suffix) {
+    if (!length(rows)) return("")
+    body <- vapply(rows, function(r) {
+      paste0(
+        '<tr><th scope="row">', escape_html(r$label), '</th>',
+        '<td class="num">', escape_html(paste0(fmt_num(r$current, digits), current_suffix)), '</td>',
+        '<td class="num">', escape_html(paste0(fmt_num(r$baseline, digits), baseline_suffix)), '</td>',
+        '<td class="num delta">', escape_html(fmt_delta(r$delta, delta_digits, delta_suffix)), '</td></tr>'
+      )
+    }, character(1))
+    paste0(
+      '<table class="evidence-ledger">',
+      '<thead><tr>',
+      '<th scope="col" class="ledger-metric"></th>',
+      '<th scope="col" class="num">current</th>',
+      '<th scope="col" class="num">baseline</th>',
+      '<th scope="col" class="num delta">Δ</th>',
+      '</tr></thead><tbody>',
+      paste(body, collapse = ""),
+      '</tbody></table>'
+    )
+  }
+  evidence_card <- function(title, body_html, muted = FALSE) {
+    if (!nzchar(paste(body_html, collapse = ""))) return("")
+    paste0(
+      '<article class="evidence-card', if (muted) ' is-muted' else '', '">',
+      '<h4>', escape_html(title), '</h4>', paste(body_html, collapse = ""), '</article>'
+    )
+  }
+  add_split_card <- function(title, support_body, not_body) {
+    if (nzchar(paste(support_body, collapse = ""))) {
+      support_evidence[[length(support_evidence) + 1]] <<- evidence_card(title, support_body)
     }
-    if (is.finite(first_year) && is.finite(last_year) && last_year < first_year) {
-      return(paste0(label, " baseline"))
+    if (nzchar(paste(not_body, collapse = ""))) {
+      not_supported_evidence[[length(not_supported_evidence) + 1]] <<- evidence_card(title, not_body, muted = TRUE)
     }
-    paste0(label, " ", last_year)
+  }
+  # DTW still uses row_compare-style one-liner via ledger of one row when needed
+  row_compare <- function(label, current_value, baseline_value, delta_value,
+                          suffix = "", delta_suffix = suffix, delta_note = "") {
+    # kept for DTW single-row; prefer ledger when multi-metric
+    paste0(
+      '<div class="evidence-row"><span class="evidence-label">', escape_html(label),
+      '</span><span class="evidence-current">current ', escape_html(fmt_num(current_value)), suffix,
+      '</span><span class="evidence-baseline">baseline ', escape_html(fmt_num(baseline_value)), suffix,
+      '</span><span class="evidence-delta">Δ ', escape_html(paste0(fmt_delta(delta_value, 1, delta_suffix), delta_note)),
+      '</span></div>'
+    )
   }
 
-  last_text_parts <- c()
-  cover_last <- format_last("Cover", last_cover, cover_yrs)
-  grass_last <- format_last("Grass", last_grass, grass_yrs)
-  if (!is.null(cover_last)) last_text_parts <- c(last_text_parts, cover_last)
-  if (!is.null(grass_last)) last_text_parts <- c(last_text_parts, grass_last)
-  if (is.finite(last_shrub)) last_text_parts <- c(last_text_parts, paste0("Shrub ", last_shrub))
-  last_text <- if (length(last_text_parts) > 0) {
-    paste("Last at/above baseline:", paste(last_text_parts, collapse = "; "))
-  } else {
-    "Last at/above baseline: not available"
+  # Support sign gate (per metric, independent — not all required):
+  #   Cover ↓ (Δ < 0) → Support; Cover ↑/flat → Not supported
+  #   Grass ↓ (Δ < 0) → Support; Grass ↑/flat → Not supported (contrary)
+  #   Shrub ↑ (Δ > 0) → Support (type-shift / decline composition); Shrub ↓/flat → Not supported
+  metric_specs <- tibble::tibble(
+    metric = c("Cover", "Grass", "Shrub"),
+    current = c(pull_num("Cover"), pull_num("Grass"), pull_num("Shrub")),
+    delta = c(cover_delta, grass_delta, shrub_delta),
+    # +1 = Support when Δ > 0; -1 = Support when Δ < 0
+    support_sign = c(-1L, -1L, 1L)
+  ) %>%
+    dplyr::mutate(baseline = .data$current - .data$delta)
+  change_support_rows <- list()
+  change_not_rows <- list()
+  for (j in seq_len(nrow(metric_specs))) {
+    z <- metric_specs[j, ]
+    entry <- list(label = z$metric[[1]], current = z$current[[1]],
+                  baseline = z$baseline[[1]], delta = z$delta[[1]])
+    d <- z$delta[[1]]
+    sgn <- z$support_sign[[1]]
+    in_support <- is.finite(d) && ((sgn < 0 && d < 0) || (sgn > 0 && d > 0))
+    if (isTRUE(in_support)) {
+      change_support_rows[[length(change_support_rows) + 1]] <- entry
+    } else {
+      change_not_rows[[length(change_not_rows) + 1]] <- entry
+    }
   }
-
-  summary_text <- paste0(
-    "Type ", type_label, " parcel (", wf_label, "; ", wf_name, "). ",
-    "Cover Δ ", cover_delta, "%; Grass Δ ", grass_delta, "%; Shrub Δ ", shrub_delta, "%."
+  add_split_card(
+    "Change vs baseline",
+    ledger_table(change_support_rows, digits = 1, delta_digits = 1, delta_suffix = " pp", current_suffix = "%"),
+    ledger_table(change_not_rows, digits = 1, delta_digits = 1, delta_suffix = " pp", current_suffix = "%")
   )
 
-  pshrub_pct <- if (!is.na(current$pShrub)) round(current$pShrub * 100, 1) else NA_real_
-  props_parts <- c()
-  if (is.finite(pgrass_pct)) props_parts <- c(props_parts, paste0("grass ", pgrass_pct, "%"))
-  if (is.finite(pshrub_pct)) props_parts <- c(props_parts, paste0("shrub ", pshrub_pct, "%"))
-  props_text <- if (length(props_parts) > 0) {
-    paste0("Current proportions: ", paste(props_parts, collapse = "; "), ".")
-  } else {
-    "Current proportions: not available."
+  # Same sign gate as Change vs baseline: counter rows Support only when that metric's Δ < 0.
+  # yrs > 0 alone is not enough — recovered grass (Δ ≥ 0) belongs under Not supported.
+  counter_support <- c()
+  counter_not <- c()
+  for (nm in c("Cover", "Grass")) {
+    yrs <- if (nm == "Cover") cover_yrs else grass_yrs
+    delta_m <- if (nm == "Cover") cover_delta else grass_delta
+    row <- row_simple(nm, paste0(fmt_num(yrs, 0), " years below baseline"),
+                      if (is.finite(yrs) && yrs > 5) "I.C.1.a sustained-change screen" else NULL)
+    if (is.finite(yrs) && yrs > 0 && is.finite(delta_m) && delta_m < 0) {
+      counter_support <- c(counter_support, row)
+    } else {
+      counter_not <- c(counter_not, row)
+    }
   }
+  add_split_card("Sustained counters", counter_support, counter_not)
 
-  cover_pct <- if (!is.na(current$Cover)) round(current$Cover, 1) else NA_real_
-  grass_pct <- if (!is.na(current$Grass)) round(current$Grass, 1) else NA_real_
-  shrub_pct <- if (!is.na(current$Shrub)) round(current$Shrub, 1) else NA_real_
-  cover_parts <- c()
-  if (is.finite(cover_pct)) cover_parts <- c(cover_parts, paste0("total ", cover_pct, "%"))
-  if (is.finite(grass_pct)) cover_parts <- c(cover_parts, paste0("grass ", grass_pct, "%"))
-  if (is.finite(shrub_pct)) cover_parts <- c(cover_parts, paste0("shrub ", shrub_pct, "%"))
-  cover_vals_text <- if (length(cover_parts) > 0) {
-    paste0("Current cover: ", paste(cover_parts, collapse = "; "), ".")
-  } else {
-    "Current cover: not available."
+  pct_rows <- if (exists("parcel_pct_summary") && is.data.frame(parcel_pct_summary)) {
+    parcel_pct_summary %>% dplyr::filter(.data$Parcel == parcel_id)
+  } else tibble::tibble()
+  # Percentile rows follow the same metric Δ sign gate as Change vs baseline
+  # (Cover↓ / Grass↓ / Shrub↑ → Support; opposite signs → Not supported).
+  # Do not use cur_p < 50: a mid-series percentile can be <50 while Δ vs baseline is positive
+  # (e.g. FSL054 Grass CURRENT 32 vs BASELINE 5, Δ +27) — that is contrary / Not supported.
+  pct_support_rows <- list()
+  pct_not_rows <- list()
+  for (met in c("Cover", "Grass", "Shrub")) {
+    pr <- pct_rows %>% dplyr::filter(.data$metric == met) %>% dplyr::slice(1)
+    if (!nrow(pr)) next
+    cur_p <- pr$current_percentile[[1]]
+    base_p <- pr$baseline_percentile_mean[[1]]
+    delta_p <- if (is.finite(cur_p) && is.finite(base_p)) cur_p - base_p else NA_real_
+    entry <- list(label = met, current = cur_p, baseline = base_p, delta = delta_p)
+    abs_delta <- if (met == "Cover") cover_delta else if (met == "Grass") grass_delta else shrub_delta
+    # Cover/Grass: Support on decline (Δ < 0). Shrub: Support on increase (Δ > 0).
+    in_support <- if (met == "Shrub") {
+      is.finite(abs_delta) && abs_delta > 0
+    } else {
+      is.finite(abs_delta) && abs_delta < 0
+    }
+    if (isTRUE(in_support)) {
+      pct_support_rows[[length(pct_support_rows) + 1]] <- entry
+    } else {
+      pct_not_rows[[length(pct_not_rows) + 1]] <- entry
+    }
   }
-
-  yoy_parts <- c()
-  if (is.finite(yoy_grass)) yoy_parts <- c(yoy_parts, paste0("grass ", yoy_grass, "%"))
-  if (is.finite(yoy_cover)) yoy_parts <- c(yoy_parts, paste0("cover ", yoy_cover, "%"))
-  if (is.finite(yoy_pgrass)) yoy_parts <- c(yoy_parts, paste0("pGrass ", if (yoy_pgrass >= 0) "+" else "", yoy_pgrass))
-  yoy_text <- if (length(yoy_parts) > 0) {
-    paste0("Year-over-year: ", paste(yoy_parts, collapse = "; "), ".")
-  } else {
-    "Year-over-year: not available."
-  }
-
-  dtw_text <- if (is.finite(dtw_current) && is.finite(dtw_baseline)) {
-    paste0("Current DTW (ft BGS): ", round(dtw_current, 2),
-           "; baseline avg (1984-86): ", round(dtw_baseline, 2), ".")
-  } else {
-    "Current DTW vs baseline: not available."
-  }
-
-  sig_text <- paste0(
-    "Significance counters (years below baseline): Cover ",
-    dplyr::coalesce(current$Cover_sig.counter, 0),
-    "; Grass ",
-    dplyr::coalesce(current$Grass_sig.counter, 0)
+  add_split_card(
+    "Percentile rank",
+    ledger_table(pct_support_rows, digits = 0, delta_digits = 0, delta_suffix = " pct pts"),
+    ledger_table(pct_not_rows, digits = 0, delta_digits = 0, delta_suffix = " pct pts")
   )
 
-  c(summary_text, below_text, last_text, props_text, cover_vals_text, yoy_text, dtw_text, sig_text)
+  swatch <- function(hex) paste0('<span class="lifeform-swatch" style="background:', hex, '" aria-hidden="true"></span>')
+  proportion_rows <- c(
+    if (is.finite(pgrass_pct)) paste0(
+      '<div class="evidence-row"><span class="evidence-label">', swatch("#1B5E20"),
+      'Grass</span><span class="evidence-current evidence-wide">',
+      escape_html(paste0(fmt_num(pgrass_pct, 0), "% of perennial cover")),
+      '</span></div>'
+    ) else NULL,
+    if (is.finite(pshrub_pct)) paste0(
+      '<div class="evidence-row"><span class="evidence-label">', swatch("#8D6E63"),
+      'Shrub</span><span class="evidence-current evidence-wide">',
+      escape_html(paste0(fmt_num(pshrub_pct, 0), "% of perennial cover")),
+      '</span></div>'
+    ) else NULL
+  )
+  if (length(proportion_rows)) {
+    # High grass / still-Type-C (meadow-like) → Not supported (type-stable).
+    # Type C shrub≥80% drift alarm → Support (composition change, not type-stable).
+    type_stable_props <- (is.finite(pgrass_pct) && pgrass_pct >= 60) ||
+      (isTRUE(flags$shrub_flag_applies) && !isTRUE(flags$shrub_ge_80)) ||
+      (!isTRUE(flags$shrub_flag_applies) && identical(gb, "C"))
+    type_drift_props <- isTRUE(flags$shrub_flag_applies) && isTRUE(flags$shrub_ge_80)
+    if (type_drift_props) {
+      support_evidence[[length(support_evidence) + 1]] <- evidence_card(
+        "Perennial proportions (type drift)", proportion_rows
+      )
+    } else if (type_stable_props || length(proportion_rows)) {
+      not_supported_evidence[[length(not_supported_evidence) + 1]] <- evidence_card(
+        "Perennial proportions (type-stable)", proportion_rows, muted = TRUE
+      )
+    }
+  } else {
+    not_supported_evidence[[length(not_supported_evidence) + 1]] <- evidence_card(
+      "Perennial proportions", row_simple("Composition", "Unavailable"), muted = TRUE
+    )
+  }
+
+  dtw_delta <- if (is.finite(dtw_current) && is.finite(dtw_baseline)) dtw_current - dtw_baseline else NA_real_
+  dtw_row <- if (is.finite(dtw_current) && is.finite(dtw_baseline)) {
+    row_compare(
+      "DTW (ft BGS)", dtw_current, dtw_baseline, dtw_delta, "", " ft",
+      if (dtw_delta < 0) " (shallower)" else if (dtw_delta > 0) " (deeper)" else ""
+    )
+  } else row_simple("DTW", "Unavailable")
+  # DTW is hydrologic context, not decline evidence → Not supported column.
+  not_supported_evidence[[length(not_supported_evidence) + 1]] <- evidence_card(
+    "Hydrologic context", dtw_row, muted = TRUE
+  )
+
+  # NDVI: compact table + residual screen (unexpected baseline offset → investigate baseline validity)
+  if (is.finite(ndvi_now) || is.finite(ndvi_base)) {
+    ndvi_year_label <- if (any(ndvi_row$Year == cYear)) as.character(cYear) else "most recent"
+    # Build Cover+NDVI series for residual screen (app CSV / parcels_deltas)
+    ndvi_ts_join <- NULL
+    if (exists("parcels_deltas") && is.data.frame(parcels_deltas)) {
+      ndvi_ts_join <- parcels_deltas %>%
+        dplyr::filter(.data$Parcel == parcel_id) %>%
+        dplyr::transmute(
+          Year = as.integer(.data$NominalYear),
+          Cover = as.numeric(.data$Cover),
+          NDVI_SUR = NA_real_
+        )
+      if (exists("rs_pfix") && is.data.frame(rs_pfix) && nrow(rs_pfix)) {
+        ndvi_ts_join <- ndvi_ts_join %>%
+          dplyr::left_join(
+            rs_pfix %>%
+              dplyr::filter(.data$Parcel == parcel_id) %>%
+              dplyr::group_by(.data$Year) %>%
+              dplyr::summarise(NDVI_SUR = mean(.data$NDVI_SUR, na.rm = TRUE), .groups = "drop"),
+            by = "Year"
+          )
+      }
+    }
+    if (exists("parcel_ts_app") && is.data.frame(parcel_ts_app) &&
+        all(c("Parcel", "Cover", "NDVI_SUR") %in% names(parcel_ts_app))) {
+      year_col <- if ("Year" %in% names(parcel_ts_app)) "Year" else if ("NominalYear" %in% names(parcel_ts_app)) "NominalYear" else NULL
+      if (!is.null(year_col)) {
+        ndvi_ts_join <- parcel_ts_app %>%
+          dplyr::filter(.data$Parcel == parcel_id) %>%
+          dplyr::transmute(
+            Year = as.integer(.data[[year_col]]),
+            Cover = as.numeric(.data$Cover),
+            NDVI_SUR = as.numeric(.data$NDVI_SUR)
+          )
+      }
+    }
+    ndvi_screen <- if (!is.null(ndvi_ts_join) && nrow(ndvi_ts_join)) {
+      ndvi_cover_residual_screen(ndvi_ts_join)
+    } else {
+      tibble::tibble(ndvi_evidence_problematic = FALSE, baseline_resid_pp = NA_real_,
+                     baseline_validity_note = NA_character_)
+    }
+    ndvi_flag_html <- if (isTRUE(ndvi_screen$ndvi_evidence_problematic[[1]])) {
+      paste0(
+        '<p class="evidence-flag is-problem">',
+        '<strong>NDVI evidence problematic.</strong> ',
+        escape_html(ndvi_screen$baseline_validity_note[[1]]),
+        '</p>'
+      )
+    } else if (is.finite(ndvi_screen$baseline_resid_pp[[1]])) {
+      paste0(
+        '<p class="evidence-footnote">Baseline Cover residual vs NDVI–cover fit: ',
+        escape_html(sprintf("%+.1f pp", ndvi_screen$baseline_resid_pp[[1]])),
+        ' (placeholder screen ±', NDVI_BASELINE_RESID_PP_THRESHOLD, ' pp).</p>'
+      )
+    } else ""
+    ndvi_table <- paste0(
+      '<table class="evidence-mini-table"><thead><tr><th scope="col">Period</th><th scope="col">NDVI</th></tr></thead><tbody>',
+      '<tr><td>Most recent (', escape_html(ndvi_year_label), ')</td><td>',
+      escape_html(if (is.finite(ndvi_now)) formatC(ndvi_now, digits = 3, format = "f") else "—"),
+      '</td></tr>',
+      '<tr><td>Baseline (', escape_html(baseline_year), ')</td><td>',
+      escape_html(if (is.finite(ndvi_base)) formatC(ndvi_base, digits = 3, format = "f") else "—"),
+      '</td></tr>',
+      if (is.finite(ndvi_now) && is.finite(ndvi_base))
+        paste0(
+          '<tr><td>Δ (recent − baseline)</td><td>',
+          escape_html(sprintf("%+.3f", ndvi_now - ndvi_base)),
+          '</td></tr>'
+        )
+      else "",
+      '</tbody></table>',
+      ndvi_flag_html,
+      '<p class="evidence-footnote">[Jul 15–Sep 15 aggregate; roughly two months after the June–late-July LPT sampling window.]</p>'
+    )
+    # Inline 1:1 / residual diagnostic plot when present
+    ndvi_1to1 <- here::here("output", "ndvi_cover_baseline", paste0(parcel_id, "_ndvi_cover_1to1.png"))
+    ndvi_resid_png <- here::here("output", "figures", "ndvi_residuals", paste0(parcel_id, "_ndvi_residual.png"))
+    diag_png <- if (file.exists(ndvi_1to1)) ndvi_1to1 else if (file.exists(ndvi_resid_png)) ndvi_resid_png else NA_character_
+    if (!is.na(diag_png)) {
+      ndvi_table <- paste0(
+        ndvi_table,
+        '<figure class="ndvi-inline-diag"><img src="', knitr::image_uri(diag_png),
+        '" alt="', escape_html(parcel_id), ' NDVI-cover diagnostic"/>',
+        '<figcaption>NDVI↔cover 1:1 diagnostic with separate OLS for pre-2015 (re-randomized) vs 2015+ (permanent); dashed = standardized 1:1. ',
+        'Unexpected baseline offset → investigate baseline validity.</figcaption></figure>'
+      )
+    }
+    # NDVI is vegetation-index / baseline-validity context, not decline evidence → Not supported.
+    ndvi_title <- if (isTRUE(ndvi_screen$ndvi_evidence_problematic[[1]])) {
+      "NDVI vegetation index (baseline validity)"
+    } else {
+      "NDVI vegetation index"
+    }
+    not_supported_evidence[[length(not_supported_evidence) + 1]] <- evidence_card(
+      ndvi_title, ndvi_table, muted = TRUE
+    )
+  }
+
+  # Grass proportion stability → stable veg type (not an alarm)
+  pgrass_hist <- parcels_deltas %>%
+    filter(Parcel == parcel_id,
+           (is.na(baseline_year) | Year > baseline_year),
+           is.finite(pGrass)) %>%
+    arrange(Year)
+  if (nrow(pgrass_hist) >= 3) {
+    mn <- round(100 * mean(pgrass_hist$pGrass, na.rm = TRUE), 0)
+    lo <- round(100 * min(pgrass_hist$pGrass, na.rm = TRUE), 0)
+    hi <- round(100 * max(pgrass_hist$pGrass, na.rm = TRUE), 0)
+    cur_g <- if (is.finite(flags$p_grass)) round(100 * flags$p_grass, 0) else pgrass_pct
+    if (is.finite(cur_g) && cur_g >= 60) {
+      stable_type <- c(
+        stable_type,
+        paste0(
+          "Grass still ~", cur_g, "% of perennial cover (reinventory mean ~", mn,
+          "%; range ", lo, "–", hi, "%). Meadow/grass dominance supports vegetation-type stability — not a shrub-encroachment alarm."
+        )
+      )
+    }
+    if (!isTRUE(flags$shrub_flag_applies) && isTRUE(flags$shrub_ge_80_raw)) {
+      stable_type <- c(
+        stable_type,
+        paste0(
+          "Mapped Type ", dplyr::coalesce(gb, type_label),
+          ": high shrub share is consistent with type; the Type C→B shrub≥80% / grass:shrub≈0.2 cutpoint flag does not apply."
+        )
+      )
+    } else if (isTRUE(flags$shrub_flag_applies) && !isTRUE(flags$shrub_ge_80) && is.finite(pshrub_pct) && pshrub_pct < 80) {
+      stable_type <- c(
+        stable_type,
+        "Shrub share below the Type C→B ≥80% reference — high-shrub alarm does not apply at present."
+      )
+    }
+  }
+
+  # Type B if-then framing
+  if (identical(gb, "B")) {
+    next_steps <- c(
+      next_steps,
+      paste0(
+        "Mapped Type B (shrubland) context: a sustained cover decline paired with a deeper-than-expected water table ",
+        "may warrant I.C.1.b attributability analysis. If the water table is not deeper than expected for Type B, ",
+        "interpret cover change within the normal range of mapped Type B shrublands rather than treating it as a meadow-type (C) alarm. ",
+        "The Type C→B shrub≥80% / grass:shrub cutpoint does not apply while the parcel remains mapped Type B."
+      )
+    )
+  }
+
+  # FSL054 special consideration
+  if (identical(parcel_id, "FSL054")) {
+    next_steps <- c(
+      next_steps,
+      paste0(
+        "Special consideration — riparian history: this stand was historically riparian scrub / coyote willow (Type D character). ",
+        "After pumping-related die-off, fire, and river-level / irrigation practices that no longer support Type D, ",
+        "the vegetation is now more akin to Type C meadow. Treat mapped type vs present composition as an interpretive context, ",
+        "not a simple C→B shrub-encroachment story."
+      ),
+      paste0(
+        "Composition differs from the mapped type because of that riparian history; use those differences for interpretation ",
+        "and future management analysis, not as an automatic Type C alarm."
+      ),
+      paste0(
+        "Naming note: FSL* parcel codes here are Laws wellfield parcels along the Owens River mainstem — not Fish Slough."
+      )
+    )
+  }
+
+  # Next steps / attributability follow-ups
+  if (is.finite(dtw_current) && is.finite(dtw_baseline)) {
+    if (dtw_current < dtw_baseline) {
+      next_steps <- c(
+        next_steps,
+        paste0(
+          paste0("Depth-to-water (DTW) is currently shallower than the ", baseline_label, " on this parcel. "),
+          paste0("In plain terms, the water table is closer to the surface than it was at the ", baseline_label, ". "),
+          "The Green Book “adequacy-for-type” hydro screen asks whether depth is too deep for the mapped vegetation type; ",
+          "a shallower reading does not, by itself, push that screen. ",
+          "It also does not prove or disprove pumping as a cause — it only means hydrology alone is not the red flag here. ",
+          "Still check composition change, baseline quality (including NDVI↔cover residuals), and other I.C.1.b factors before causal language."
+        )
+      )
+    } else {
+      next_steps <- c(
+        next_steps,
+        paste0(
+          paste0("Depth-to-water (DTW) is currently deeper than the ", baseline_label, " (water table farther below ground). "),
+          "If that deeper condition is sustained and looks incompatible with mapped Type ", type_label,
+          ", prioritize I.C.1.b water-table / soil-water factors in attributability analysis — ",
+          "together with rainfall, land use, and other stressors. Deeper DTW is context for causation review, not a final “but for” finding by itself."
+        )
+      )
+    }
+  } else {
+    next_steps <- c(
+      next_steps,
+      paste0(
+        "DTW vs baseline is unavailable for this parcel in the current tables. ",
+        "Attributability (I.C.1.b) needs hydrologic context before “but for pumping / surface-water practice” language; ",
+        "pull well records or revisit the DTW join before closing a hydro screen."
+      )
+    )
+  }
+
+  if (identical(parcel_id, "FSL044")) {
+    next_steps <- c(
+      next_steps,
+      paste0(
+        "NDVI↔cover diagnostic (plot in the margin / NDVI card): 1987 baseline cover sits well above the parcel’s NDVI–cover fit ",
+        "(large positive residual). That pattern is a flag to investigate baseline validity (possible inflated baseline), ",
+        "not a causal conclusion about pumping."
+      ),
+      paste0(
+        "Pre-2015 vs 2015+ permanent-transect network eras differ in sampling design; ",
+        "do not over-interpret single-year NDVI/cover mismatches across that break."
+      ),
+      paste0(
+        "Meadow-dominant composition and currently shallow DTW are important context for any later attributability discussion on this parcel."
+      )
+    )
+  }
+
+  if (identical(gb, "B")) {
+    next_steps <- c(
+      next_steps,
+      paste0(
+        "Keep the grass:shrub ratio visible in the timeseries for composition context only. ",
+        "Do not flag or badge on the Type C→B shrub≥80% / ~0.2 grass-share cutpoint while the parcel is mapped Type B."
+      )
+    )
+  }
+
+  if (!identical(parcel_id, "FSL054") && cover_yrs > 5) {
+    next_steps <- c(
+      next_steps,
+      paste0(
+        "Measurability under Box I.C.1.a.ii is already established for this parcel (sustained cover and/or grass below baseline). ",
+        "Causation is a separate step: I.C.1.b attributability requires control comparisons, rainfall, land use, and other stressors ",
+        "before any “but for pumping / surface-water practice” conclusion."
+      )
+    )
+  }
+
+
+
+  # Sequential screening: Support, then Not supported (no top status tiles; no side-by-side columns).
+  html <- paste0(
+    '<div class="parcel-screening parcel-screening-stack">\n',
+    '<p class="parcel-cards-intro">',
+    '<strong>Support</strong> = <em>decline evidence only</em> (cover↓ / grass↓ / shrub↑ vs baseline; sustained counters and percentile rows on the same sign gate). ',
+    '<strong>Not supported</strong> = type-stable / contrary signals (grass↑ / shrub↓ / cover↑; high grass / still-Type-C proportions; DTW &amp; NDVI context). ',
+    'Not attributability or cause (see I.C.1.b).',
+    '</p>\n',
+    '<div class="parcel-cards parcel-cards-stack">\n',
+    '<section class="parcel-card parcel-card-support">\n',
+    '<p class="parcel-card-title">Support <span class="parcel-card-sub">(decline evidence)</span></p>\n',
+    if (length(support_evidence)) paste(support_evidence, collapse = "") else '<p class="parcel-card-empty">No decline evidence identified.</p>',
+    '</section>\n',
+    '<section class="parcel-card parcel-card-not-supported">\n',
+    '<p class="parcel-card-title">Not supported <span class="parcel-card-sub">(type-stable / contrary)</span></p>\n',
+    if (length(not_supported_evidence)) paste(not_supported_evidence, collapse = "") else '<p class="parcel-card-empty">No type-stable / contrary signal identified.</p>',
+    '</section>\n',
+    '<section class="parcel-card parcel-card-next">\n',
+    '<p class="parcel-card-title">Next steps</p>\n',
+    card_list_html(unique(next_steps)),
+    '</section>\n'
+  )
+  if (length(stable_type) > 0) {
+    html <- paste0(
+      html,
+      '<section class="parcel-card parcel-card-stable">\n',
+      '<p class="parcel-card-title">Type-stable notes <span class="parcel-card-sub">(also under Not supported)</span></p>\n',
+      card_list_html(unique(stable_type)),
+      '</section>\n'
+    )
+  }
+  paste0(html, "</div>\n</div>\n")
+}
+
+# Back-compat alias used nowhere after this patch
+build_parcel_notes <- function(parcel_id) {
+  # retained for any external callers; prefer build_parcel_cards
+  character(0)
 }
 
 for (i in seq_len(nrow(profile_parcels))) {
   pid <- profile_parcels$Parcel[i]
-  wf_group <- profile_parcels$wellfield_group[i]
-  cat("\n\n### ", wf_group, " — Parcel ", pid, "\n\n", sep = "")
+  baseline_year <- profile_baseline_year(pid)
+  wf_group <- as.character(profile_parcels$wellfield_group[i])
+  wf_slug <- sub("-+$", "", gsub("[^a-z0-9]+", "-", tolower(wf_group)))
+  anchor_id <- paste0(wf_slug, "--parcel-", tolower(pid))
+  cat("\n\n### ", wf_group, " — Parcel ", pid, " {#", anchor_id, "}\n\n", sep = "")
 
-  notes <- build_parcel_notes(pid)
-  cat("**Notes (standardized)**\n\n")
-  cat(paste0("- ", notes, collapse = "\n"), "\n\n")
+  cat('<div class="parcel-profile-layout">\n')
+  cat('<div class="parcel-profile-main">\n')
+  cat(build_parcel_cards(pid))
+  # Optional hillshade + photo + decade spp-rank (graceful skip if assets missing)
+  if (exists("emit_flagged_parcel_context", mode = "function")) {
+    tryCatch(emit_flagged_parcel_context(pid), error = function(e)
+      message("flagged context skip for ", pid, ": ", e$message))
+  }
+  cat('<div class="parcel-timeseries-block">\n')
 
   ts_raw <- parcels_deltas %>%
     filter(Parcel == pid) %>%
-    select(NominalYear, Cover, Grass, Shrub, pGrass, pShrub) %>%
-    arrange(NominalYear)
+    select(Year, Cover, Grass, Shrub, Herb, pGrass, pShrub, pHerb) %>%
+    arrange(Year)
 
   year_min <- 1985
   year_max <- cYear
 
   current_vals <- parcels_deltas %>%
-    filter(Parcel == pid, NominalYear == cYear) %>%
-    select(Cover, Grass, Shrub, pGrass, pShrub) %>%
+    filter(Parcel == pid, Year == cYear) %>%
+    select(Cover, Grass, Shrub, Herb, pGrass, pShrub, pHerb) %>%
     slice(1)
 
   if (nrow(current_vals) == 0) {
     current_vals <- deltas_ttest_att %>%
       filter(Parcel == pid) %>%
       slice(1) %>%
-      select(Cover, Grass, Shrub, pGrass, pShrub)
+      select(any_of(c("Cover", "Grass", "Shrub", "Herb", "pGrass", "pShrub", "pHerb")))
   }
+
+  fill_pGrass <- if (nrow(current_vals) > 0 && "pGrass" %in% names(current_vals)) current_vals$pGrass[[1]] else NA_real_
+  fill_pShrub <- if (nrow(current_vals) > 0 && "pShrub" %in% names(current_vals)) current_vals$pShrub[[1]] else NA_real_
+  fill_pHerb <- if (nrow(current_vals) > 0 && "pHerb" %in% names(current_vals)) current_vals$pHerb[[1]] else NA_real_
 
   ts <- ts_raw %>%
-    complete(NominalYear = year_min:year_max) %>%
+    complete(Year = year_min:year_max) %>%
     mutate(
-      Cover = ifelse(is.na(Cover) & !is.na(Grass) & !is.na(Shrub), Grass + Shrub, Cover),
-      Grass = ifelse(is.na(Grass) & !is.na(Cover) & !is.na(pGrass), Cover * pGrass, Grass),
-      Shrub = ifelse(is.na(Shrub) & !is.na(Cover) & !is.na(pShrub), Cover * pShrub, Shrub),
-      Cover = ifelse(NominalYear == cYear & is.na(Cover), current_vals$Cover, Cover),
-      Grass = ifelse(NominalYear == cYear & is.na(Grass), current_vals$Grass, Grass),
-      Shrub = ifelse(NominalYear == cYear & is.na(Shrub), current_vals$Shrub, Shrub),
-      pGrass = ifelse(NominalYear == cYear & is.na(pGrass), current_vals$pGrass, pGrass),
-      pShrub = ifelse(NominalYear == cYear & is.na(pShrub), current_vals$pShrub, pShrub),
-      Cover = ifelse(
-        NominalYear == cYear & is.na(Cover) &
-          is.finite(Grass) & is.finite(pGrass) & pGrass > 0,
-        Grass / pGrass,
-        Cover
-      ),
-      Cover = ifelse(
-        NominalYear == cYear & is.na(Cover) &
-          is.finite(Shrub) & is.finite(pShrub) & pShrub > 0,
-        Shrub / pShrub,
-        Cover
-      ),
-      pGrass = round(pGrass, 2)
+      pGrass = ifelse(Year == cYear & is.na(pGrass), fill_pGrass, pGrass),
+      pShrub = ifelse(Year == cYear & is.na(pShrub), fill_pShrub, pShrub),
+      pHerb = ifelse(Year == cYear & is.na(pHerb), fill_pHerb, pHerb),
+      # Fill proportions from absolute cover when needed
+      pGrass = ifelse(is.na(pGrass) & is.finite(Cover) & Cover > 0 & is.finite(Grass), Grass / Cover, pGrass),
+      pShrub = ifelse(is.na(pShrub) & is.finite(Cover) & Cover > 0 & is.finite(Shrub), Shrub / Cover, pShrub),
+      pHerb = ifelse(is.na(pHerb) & is.finite(Cover) & Cover > 0 & is.finite(Herb), Herb / Cover, pHerb),
+      pGrass = round(pGrass, 3),
+      pShrub = round(pShrub, 3),
+      pHerb = round(pHerb, 3)
     )
 
-  year_breaks <- sort(unique(c(seq(year_min, year_max, by = 5), year_max)))
-  plot_margin <- margin(14, 24, 14, 14)
-  x_limits <- c(year_min - 0.5, year_max + 0.5)
-
-  ts_stack <- ts %>%
-    select(NominalYear, Grass, Shrub) %>%
-    pivot_longer(cols = c(Grass, Shrub), names_to = "metric", values_to = "value") %>%
-    mutate(metric = factor(metric, levels = c("Grass", "Shrub"))) %>%
-    arrange(metric)
-
-  baseline_total <- ts %>%
-    filter(NominalYear == 1986) %>%
-    transmute(total = Grass + Shrub) %>%
-    slice(1) %>%
-    pull(total)
-
-  baseline_grass <- ts %>%
-    filter(NominalYear == 1986) %>%
-    transmute(grass = Grass) %>%
-    slice(1) %>%
-    pull(grass)
-
-  label_offset <- max(ts$Grass + ts$Shrub, na.rm = TRUE) * 0.03
-  if (!is.finite(label_offset) || label_offset == 0) {
-    label_offset <- 1
+  # Prefer current year on the axis; drop prior 5-yr tick if it would collide (e.g. 2025 vs 2026)
+  year_breaks <- seq(year_min, year_max, by = 5)
+  if (!(year_max %in% year_breaks)) {
+    if (length(year_breaks) && (year_max - max(year_breaks)) < 3) {
+      year_breaks <- year_breaks[year_breaks < max(year_breaks)]
+    }
+    year_breaks <- c(year_breaks, year_max)
   }
-
-  p_stack <- ggplot(ts_stack, aes(x = NominalYear, y = value, fill = metric)) +
-    geom_col(position = "stack", width = 0.8, na.rm = TRUE) +
-    scale_fill_manual(values = c(Grass = "#66a61e", Shrub = "#7570b3")) +
-    labs(x = NULL, y = "Cover (%)", fill = "Metric") +
-    scale_y_continuous(expand = expansion(mult = c(0.02, 0.26))) +
-    scale_x_continuous(breaks = year_breaks, expand = expansion(mult = c(0, 0))) +
-    coord_cartesian(xlim = x_limits, clip = "off") +
-    theme_minimal(base_size = 11) +
+  # Room for y titles + tick labels so stacked panels don't collide
+  plot_margin <- margin(12, 20, 14, 28)
+  panel_theme <- theme_minimal(base_size = 12) +
     theme(
       plot.margin = plot_margin,
-      plot.spacing = unit(0.3, "lines"),
-      axis.title.y = element_text(margin = margin(r = 10))
+      axis.title.y = element_text(size = 11, margin = margin(r = 16)),
+      axis.text.y = element_text(size = 9),
+      axis.text.x = element_text(size = 9),
+      legend.text = element_text(size = 9),
+      legend.title = element_text(size = 9),
+      plot.caption = element_text(hjust = 0, size = 8.5, color = "gray40")
+    )
+  x_limits <- c(year_min - 0.5, year_max + 0.75)
+
+  # Shared lifeform palette (stack + line + proportion cards)
+  # Grass kept dark green; herb purple; shrub brown; annuals light/dark pink
+  col_grass <- "#1B5E20"
+  col_herb <- "#7B1FA2"
+  col_shrub <- "#8D6E63"
+  col_cover <- "#263238"
+  col_ann_nat <- "#F8BBD0"
+  col_ann_non <- "#C2185B"
+
+  # Absolute cover — the series that drives Cover/Grass measurability flags
+  baseline_cover <- ts %>%
+    filter(Year == baseline_year) %>%
+    summarise(
+      Cover = mean(Cover, na.rm = TRUE),
+      Grass = mean(Grass, na.rm = TRUE),
+      .groups = "drop"
     )
 
-  if (!is.na(baseline_total)) {
-    p_stack <- p_stack +
-      geom_hline(yintercept = baseline_total, linetype = "dashed", color = "black")
-  }
+  ts_cover <- ts %>%
+    select(Year, Cover, Grass, Shrub) %>%
+    pivot_longer(cols = c(Cover, Grass, Shrub), names_to = "metric", values_to = "value") %>%
+    mutate(
+      metric = factor(
+        metric,
+        levels = c("Cover", "Grass", "Shrub"),
+        labels = c("Total cover", "Grass", "Shrub")
+      )
+    )
 
-  if (!is.na(baseline_grass)) {
-    p_stack <- p_stack +
-      geom_hline(yintercept = baseline_grass, linetype = "dashed", color = "#66a61e")
-  }
+  cover_end <- ts_cover %>%
+    dplyr::filter(is.finite(.data$value)) %>%
+    dplyr::group_by(.data$metric) %>%
+    dplyr::slice_max(order_by = .data$Year, n = 1, with_ties = FALSE) %>%
+    dplyr::ungroup()
 
-  if (is.finite(baseline_total) && is.finite(baseline_grass) &&
-      abs(baseline_total - baseline_grass) < 0.01) {
-    p_stack <- p_stack +
-      annotate("text", x = min(ts$NominalYear, na.rm = TRUE), y = baseline_grass + label_offset,
-               label = "Grass baseline", hjust = 0, vjust = 0, size = 3, color = "#66a61e")
-  } else {
-    if (!is.na(baseline_total)) {
-      p_stack <- p_stack +
-        annotate("text", x = min(ts$NominalYear, na.rm = TRUE), y = baseline_total + label_offset,
-                 label = "Baseline (1986)", hjust = 0, vjust = 0, size = 3)
-    }
-    if (!is.na(baseline_grass)) {
-      p_stack <- p_stack +
-        annotate("text", x = min(ts$NominalYear, na.rm = TRUE), y = baseline_grass + label_offset,
-                 label = "Grass baseline", hjust = 0, vjust = 0, size = 3, color = "#66a61e")
-    }
-  }
-
-  baseline_pgrass <- ts %>%
-    filter(NominalYear == 1986) %>%
-    transmute(pGrass = pGrass) %>%
-    slice(1) %>%
-    pull(pGrass)
-
-  pgrass_offset <- (max(ts$pGrass, na.rm = TRUE) - min(ts$pGrass, na.rm = TRUE)) * 0.12
-  if (!is.finite(pgrass_offset) || pgrass_offset == 0) {
-    pgrass_offset <- 0.05
-  }
-
-  p_prop <- ggplot(ts, aes(x = NominalYear, y = pGrass)) +
-    geom_line(linewidth = 0.7, color = "#1b9e77", na.rm = TRUE) +
-    geom_point(size = 1.6, color = "#1b9e77", na.rm = TRUE) +
-    labs(x = NULL, y = "pGrass") +
+  # Line/points only where Cover/Grass/Shrub are observed; NA years (no survey)
+  # leave gaps — do not connect across missing inventory years.
+  p_cover <- ggplot(ts_cover, aes(x = Year, y = value, color = metric)) +
+    geom_line(linewidth = 0.7, na.rm = FALSE) +
+    geom_point(size = 1.8, na.rm = TRUE) +
+    geom_text(
+      data = cover_end,
+      aes(label = metric),
+      hjust = -0.08, vjust = 0.5, size = 2.7, show.legend = FALSE, check_overlap = TRUE
+    ) +
+    scale_color_manual(
+      values = c("Total cover" = col_cover, Grass = col_grass, Shrub = col_shrub)
+    ) +
+    labs(x = NULL, y = "Cover (%)", color = NULL) +
     scale_x_continuous(breaks = year_breaks, expand = expansion(mult = c(0, 0))) +
-    scale_y_continuous(expand = expansion(mult = c(0.05, 0.28)), labels = function(x) sprintf("%.2f", x)) +
-    coord_cartesian(xlim = x_limits, clip = "off") +
-    theme_minimal(base_size = 11) +
-    theme(
-      plot.margin = plot_margin,
-      plot.spacing = unit(0.3, "lines"),
-      axis.title.y = element_text(margin = margin(r = 10))
-    )
+    coord_cartesian(xlim = c(year_min - 0.5, year_max + 3.2), clip = "off") +
+    panel_theme +
+    theme(legend.position = "bottom") +
+    guides(color = guide_legend(nrow = 1, override.aes = list(linewidth = 1.2, size = 2.5)))
 
-  if (!is.na(baseline_pgrass)) {
-    p_prop <- p_prop +
-      geom_hline(yintercept = baseline_pgrass, linetype = "dashed", color = "#1b9e77") +
-      annotate("text", x = min(ts$NominalYear, na.rm = TRUE), y = baseline_pgrass + pgrass_offset,
-               label = "Baseline (1986)", hjust = 0, vjust = 0, size = 3, color = "#1b9e77")
+  if (is.finite(baseline_cover$Cover[1])) {
+    p_cover <- p_cover +
+      geom_hline(
+        yintercept = baseline_cover$Cover[1],
+        linetype = "dashed", color = col_cover, linewidth = 0.35
+      ) +
+      annotate(
+        "text", x = year_min, y = baseline_cover$Cover[1],
+        label = paste0("Cover ", baseline_year, " baseline"), hjust = 0, vjust = -0.4, size = 2.8, color = col_cover
+      )
+  }
+  if (is.finite(baseline_cover$Grass[1]) &&
+      (!is.finite(baseline_cover$Cover[1]) ||
+         abs(baseline_cover$Grass[1] - baseline_cover$Cover[1]) > 1)) {
+    p_cover <- p_cover +
+      geom_hline(
+        yintercept = baseline_cover$Grass[1],
+        linetype = "dashed", color = col_grass, linewidth = 0.35
+      ) +
+      annotate(
+        "text", x = year_min, y = baseline_cover$Grass[1],
+        label = paste0("Grass ", baseline_year, " baseline"), hjust = 0, vjust = 1.2, size = 2.8, color = col_grass
+      )
   }
 
-  p_stack_prop <- p_stack / p_prop + plot_layout(heights = c(1, 1))
+  # Cover stack with annual native / non-native (AOP dashboard colors & series)
+  # Only survey/inventory years (finite Cover). Do NOT expand the year grid and
+  # fill with 0 — missing LPT years must stay empty (no bar, no total-cover dot).
+  p_annual_stack <- NULL
+  if (nrow(parcel_ts_app) > 0 && pid %in% parcel_ts_app$Parcel) {
+    stack_ts <- parcel_ts_app %>%
+      dplyr::filter(.data$Parcel == pid, .data$Year >= year_min, .data$Year <= year_max) %>%
+      dplyr::filter(is.finite(.data$Cover)) %>%
+      dplyr::mutate(
+        # Within an observed survey year, absent lifeform components are true 0
+        Grass = dplyr::coalesce(.data$Grass, 0),
+        Shrub = dplyr::coalesce(.data$Shrub, 0),
+        Cover = .data$Cover,
+        Annual_native = dplyr::coalesce(.data$Annual_native, 0),
+        Annual_nonnative = dplyr::coalesce(.data$Annual_nonnative, 0),
+        Other_perennial = pmax(0, .data$Cover - .data$Grass - .data$Shrub)
+      ) %>%
+      dplyr::select(
+        Year, Grass, Shrub, Other_perennial, Annual_native, Annual_nonnative, Cover
+      )
+
+    stack_long <- stack_ts %>%
+      tidyr::pivot_longer(
+        cols = c(Grass, Shrub, Other_perennial, Annual_native, Annual_nonnative),
+        names_to = "metric",
+        values_to = "value"
+      ) %>%
+      dplyr::mutate(
+        # Last factor level sits at bottom (inyoShiny / Lynn): grass → herb → shrub → annuals
+        metric = factor(
+          metric,
+          levels = c(
+            "Annual_nonnative", "Annual_native", "Shrub", "Other_perennial", "Grass"
+          ),
+          labels = c(
+            "Annual non-native", "Annual native", "Perennial shrub",
+            "Perennial herb", "Perennial grass"
+          )
+        )
+      )
+
+    p_annual_stack <- ggplot(stack_long, aes(x = Year, y = value, fill = metric)) +
+      geom_col(position = "stack", width = 0.85, na.rm = TRUE) +
+      geom_line(
+        data = stack_ts,
+        aes(x = Year, y = Cover),
+        inherit.aes = FALSE,
+        color = "#263238",
+        linewidth = 0.7,
+        na.rm = TRUE
+      ) +
+      geom_point(
+        data = stack_ts,
+        aes(x = Year, y = Cover),
+        inherit.aes = FALSE,
+        color = "#263238",
+        size = 1.2,
+        na.rm = TRUE
+      ) +
+      scale_fill_manual(
+        values = c(
+          "Perennial grass" = col_grass,
+          "Perennial herb" = col_herb,
+          "Perennial shrub" = col_shrub,
+          "Annual native" = col_ann_nat,
+          "Annual non-native" = col_ann_non
+        ),
+        breaks = c(
+          "Perennial grass", "Perennial herb", "Perennial shrub",
+          "Annual native", "Annual non-native"
+        )
+      ) +
+      labs(
+        x = NULL,
+        y = "Cover (%)",
+        fill = NULL,
+        caption = "Stack = lifeform + annuals; line = total perennial cover (Box test layer)"
+      ) +
+      scale_x_continuous(breaks = year_breaks, expand = expansion(mult = c(0, 0))) +
+      coord_cartesian(xlim = x_limits) +
+      panel_theme +
+      theme(legend.position = "bottom") +
+      guides(fill = guide_legend(nrow = 2, byrow = TRUE))
+
+    if (is.finite(baseline_cover$Cover[1])) {
+      p_annual_stack <- p_annual_stack +
+        geom_hline(
+          yintercept = baseline_cover$Cover[1],
+          linetype = "dashed", color = "#263238", linewidth = 0.35
+        )
+    }
+  }
+
+  # 100% stacked perennial lifeform proportions (inyoShiny / Lynn: grass at bottom)
+  ts_prop <- ts %>%
+    filter(is.finite(pGrass) | is.finite(pShrub) | is.finite(pHerb)) %>%
+    mutate(
+      Grass = dplyr::coalesce(pGrass, 0),
+      Herb = dplyr::coalesce(pHerb, 0),
+      Shrub = dplyr::coalesce(pShrub, 0),
+      tot = Grass + Herb + Shrub,
+      Grass = ifelse(tot > 0, Grass / tot, NA_real_),
+      Herb = ifelse(tot > 0, Herb / tot, NA_real_),
+      Shrub = ifelse(tot > 0, Shrub / tot, NA_real_)
+    ) %>%
+    select(Year, Grass, Herb, Shrub) %>%
+    pivot_longer(cols = c(Grass, Herb, Shrub), names_to = "metric", values_to = "value") %>%
+    # Last factor level at bottom — grass bottom → herb → shrub (same C→B idea as 0.2 grass line)
+    mutate(metric = factor(metric, levels = c("Shrub", "Herb", "Grass")))
+
+  # 0.2 grass / shrub≥80% cutpoint lines are Type C→B screens only (not Type B)
+  pid_gb <- parcel_gb_type(pid)
+  p_stack <- ggplot(ts_prop, aes(x = Year, y = value, fill = metric)) +
+    geom_col(position = "stack", width = 0.8, na.rm = TRUE)
+  if (type_c_shrub_flag_applies(pid_gb)) {
+    p_stack <- p_stack +
+      geom_hline(yintercept = 0.2, linetype = "dashed", color = "gray40", linewidth = 0.35) +
+      annotate(
+        "text", x = year_min, y = 0.22, label = "0.2 grass ref. (Type C→B)",
+        hjust = 0, vjust = 0, size = 2.8, color = "gray40"
+      )
+  } else if (identical(pid_gb, "B")) {
+    p_stack <- p_stack +
+      annotate(
+        "text", x = year_min, y = 0.08, label = "Type B — cutpoint not flagged",
+        hjust = 0, vjust = 0, size = 2.6, color = "gray50"
+      )
+  }
+  p_stack <- p_stack +
+    scale_fill_manual(
+      values = c(Grass = col_grass, Herb = col_herb, Shrub = col_shrub),
+      breaks = c("Grass", "Herb", "Shrub"),
+      labels = c("Perennial grass", "Perennial herb", "Perennial shrub")
+    ) +
+    labs(x = NULL, y = "Perennial proportion", fill = NULL) +
+    scale_y_continuous(breaks = seq(0, 1, 0.25), limits = c(0, 1), expand = c(0, 0)) +
+    scale_x_continuous(breaks = year_breaks, expand = expansion(mult = c(0, 0))) +
+    coord_cartesian(xlim = x_limits, clip = "off") +
+    panel_theme +
+    theme(legend.position = "bottom") +
+    guides(fill = guide_legend(nrow = 1))
+
+  # NDVI panel — relative change vs cover (baseline consistency check)
+  # Use the parcel's recorded Baseline / Year of baseline measurement.
+  ndvi_baseline_year <- profile_baseline_year(pid)
+  ndvi_ts <- rs_pfix %>%
+    filter(Parcel == pid, Year >= year_min, Year <= year_max) %>%
+    group_by(Year) %>%
+    summarise(NDVI = round(mean(NDVI_SUR, na.rm = TRUE), 3), .groups = "drop") %>%
+    complete(Year = year_min:year_max)
+
+  p_ndvi <- NULL
+  if (nrow(ndvi_ts) > 0 && any(is.finite(ndvi_ts$NDVI))) {
+    ndvi_baseline <- mean(
+      ndvi_ts$NDVI[ndvi_ts$Year == ndvi_baseline_year],
+      na.rm = TRUE
+    )
+    p_ndvi <- ggplot(ndvi_ts, aes(x = Year, y = NDVI)) +
+      geom_col(fill = "darkseagreen", width = 0.8, na.rm = TRUE) +
+      labs(x = NULL, y = "NDVI (Jul–Sep)") +
+      scale_x_continuous(breaks = year_breaks, expand = expansion(mult = c(0, 0))) +
+      coord_cartesian(xlim = x_limits) +
+      panel_theme
+    if (is.finite(ndvi_baseline)) {
+      p_ndvi <- p_ndvi +
+        geom_hline(yintercept = ndvi_baseline, linetype = "dashed", color = "darkgreen", linewidth = 0.4) +
+        annotate(
+          "text", x = year_min, y = ndvi_baseline,
+          label = paste0(ndvi_baseline_year, " NDVI"),
+          hjust = 0, vjust = -0.4, size = 2.8, color = "darkgreen"
+        )
+    }
+  }
 
   dtw_ts <- dtw_pfix %>%
     filter(Parcel == pid, Year >= year_min, Year <= year_max) %>%
@@ -460,42 +1375,99 @@ for (i in seq_len(nrow(profile_parcels))) {
       summarise(DTW = round(mean(DTW, na.rm = TRUE), 2), .groups = "drop") %>%
       complete(Year = year_min:year_max)
 
-    baseline_avg <- mean(dtw_stats$DTW[dtw_stats$Year %in% 1984:1986], na.rm = TRUE)
+    baseline_avg <- mean(dtw_stats$DTW[dtw_stats$Year == profile_baseline_year(pid)], na.rm = TRUE)
 
     p_dtw <- ggplot(dtw_stats, aes(x = Year, y = DTW)) +
       geom_line(color = "#2c3e50", linewidth = 0.8, na.rm = TRUE) +
       geom_point(color = "#2c3e50", size = 2.2, na.rm = TRUE) +
-      geom_hline(yintercept = baseline_avg, linetype = "dashed", color = "#2c3e50") +
-      annotate("text", x = year_min, y = baseline_avg, label = "Avg. 1984-86 DTW",
-               hjust = 0, vjust = -0.5, size = 3, color = "#2c3e50") +
       scale_x_continuous(breaks = year_breaks, expand = expansion(mult = c(0, 0))) +
       coord_cartesian(xlim = x_limits) +
       scale_y_reverse(labels = function(x) sprintf("%.2f", x)) +
       labs(x = "Year", y = "DTW (ft BGS)") +
-      theme_minimal(base_size = 11) +
-      theme(
-        plot.margin = plot_margin,
-        plot.spacing = unit(0.3, "lines"),
-        axis.title.y = element_text(margin = margin(r = 10))
-      )
+      panel_theme
+    if (is.finite(baseline_avg)) {
+      p_dtw <- p_dtw +
+        geom_hline(yintercept = baseline_avg, linetype = "dashed", color = "#2c3e50") +
+        annotate(
+          "text", x = year_min, y = baseline_avg,
+          label = paste0(profile_baseline_year(pid), " DTW"),
+          hjust = 0, vjust = -0.5, size = 3, color = "#2c3e50"
+        )
+    }
   }
 
-  if (!is.null(p_dtw)) {
-    p_combined <- p_stack / p_prop / p_dtw +
-      plot_layout(heights = c(1, 1, 1), guides = "collect") &
-      theme(legend.position = "bottom")
-  } else {
-    p_combined <- p_stack / p_prop +
-      plot_layout(heights = c(1, 1), guides = "collect") &
-      theme(legend.position = "bottom")
+  # Cover first (measurability signal), annual stack, composition, NDVI, DTW
+  panels <- list(p_cover)
+  heights <- c(1.35)
+  if (!is.null(p_annual_stack)) {
+    panels <- c(panels, list(p_annual_stack))
+    heights <- c(heights, 1.45)
   }
+  panels <- c(panels, list(p_stack))
+  heights <- c(heights, 1.25)
+  if (!is.null(p_ndvi)) {
+    panels <- c(panels, list(p_ndvi))
+    heights <- c(heights, 1.15)
+  }
+  if (!is.null(p_dtw)) {
+    panels <- c(panels, list(p_dtw))
+    heights <- c(heights, 1.15)
+  }
+
+  p_combined <- Reduce(`/`, panels) +
+    plot_layout(heights = heights, guides = "keep") &
+    theme(
+      legend.position = "bottom",
+      legend.direction = "horizontal",
+      legend.box = "horizontal",
+      legend.box.just = "left",
+      legend.box.spacing = unit(1, "pt"),
+      legend.spacing.x = unit(6, "pt"),
+      legend.spacing.y = unit(0, "pt"),
+      legend.margin = margin(2, 0, 0, 0),
+      legend.key.size = unit(0.65, "lines"),
+      legend.text = element_text(size = 8),
+      plot.margin = margin(4, 16, 4, 8)
+    )
 
   cat("\n\n::: {.parcel-profile-figure}\n\n")
   print(p_combined)
   cat("\n:::\n\n")
 
+
+  cat('</div>\n')  # parcel-timeseries-block
+  cat('</div>\n')  # parcel-profile-main
+
+  # Tufte-style margin: NMDS path + NDVI residual diagnostic (sparklines / margin figs)
+  nmds_png <- here::here("output", "figures", "nmds_parcels", paste0(pid, "_nmds.png"))
+  if (!file.exists(nmds_png) && exists("nmds_index") && is.data.frame(nmds_index) && nrow(nmds_index) > 0) {
+    hit <- nmds_index %>% dplyr::filter(.data$Parcel == pid, isTRUE(.data$nmds_ok))
+    if (nrow(hit) && !is.na(hit$figure[1]) && file.exists(hit$figure[1])) nmds_png <- hit$figure[1]
+  }
+  ndvi_diag_png <- here::here("output", "figures", "ndvi_residuals", paste0(pid, "_ndvi_residual.png"))
+
+  cat('<aside class="parcel-profile-margin" aria-label="Composition and NDVI diagnostics">\n')
+  if (file.exists(nmds_png)) {
+    cat('<figure class="parcel-margin-fig">\n')
+    cat('<img src="', knitr::image_uri(nmds_png), '" alt="', pid, ' valley-floor NMDS year path with same-TYPE baseline cloud"/>\n', sep = "")
+    cat('<figcaption class="parcel-margin-caption"><strong>NMDS path</strong> — valley-floor composition geometry; Type callout = mapped GB type; caption lists same-TYPE cloud n (site-years / parcels); arrows = dominant species centroids + DTW gradient (not control matching).</figcaption>\n')
+    cat('</figure>\n')
+  }
+  if (file.exists(ndvi_diag_png)) {
+    cat('<figure class="parcel-margin-fig">\n')
+    cat('<img src="', knitr::image_uri(ndvi_diag_png), '" alt="', pid, ' NDVI cover residual diagnostic"/>\n', sep = "")
+    cat('<figcaption class="parcel-margin-caption"><strong>NDVI residual</strong> — observed vs expected Cover|NDVI and residual time series; unexpected baseline offset → investigate baseline validity.</figcaption>\n')
+    cat('</figure>\n')
+  }
+  cat('</aside>\n')
+  cat('</div>\n')  # parcel-profile-layout
+
   if (is.null(p_dtw)) {
-    cat("**DTW data not available for this parcel.**\n\n")
+    cat("**DTW data not available for this parcel — adequacy-for-type cannot be screened from water levels alone.**\n\n")
+  }
+  if (is.null(p_ndvi)) {
+    cat("**NDVI not available for this parcel — skip cover/NDVI consistency check.**\n\n")
   }
 }
+
 ```
