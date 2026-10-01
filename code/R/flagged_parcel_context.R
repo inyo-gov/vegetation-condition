@@ -74,6 +74,26 @@ flagged_parcel_has_context <- function(parcel_id) {
   NULL
 }
 
+#' Prefer site URL under /www/flagged_parcel_maps/... when the file lives there
+#' (avoids multi-MB base64 in published HTML). Fall back to knitr::image_uri.
+.fp_raster_uri <- function(path) {
+  if (is.null(path) || !file.exists(path)) return(NULL)
+  path_norm <- normalizePath(path, winslash = "/", mustWork = TRUE)
+  # Match .../www/flagged_parcel_maps/<rest>
+  m <- regexpr("/www/flagged_parcel_maps/.*$", path_norm, perl = TRUE)
+  if (m[1] > 0) {
+    return(substr(path_norm, m[1], nchar(path_norm)))
+  }
+  # here()-relative fallback if cwd differs
+  root <- tryCatch(normalizePath(flagged_parcel_maps_root(), winslash = "/", mustWork = FALSE), error = function(e) "")
+  if (nzchar(root) && startsWith(path_norm, root)) {
+    rel <- substring(path_norm, nchar(root) + 1L)
+    return(paste0("/www/flagged_parcel_maps", rel))
+  }
+  knitr::image_uri(path)
+}
+
+
 #' Inline Leaflet ImageOverlay + GeoJSON as a self-contained HTML fragment (no htmlwidget).
 #' BWMA-preview-style layer panel (checkboxes) so hillshade / CHM / height bins / SAM
 #' can be toggled without hunting clicks. Reusable for any parcel with www/flagged_parcel_maps/{PCL}/.
@@ -84,7 +104,8 @@ flagged_parcel_has_context <- function(parcel_id) {
   }
   west <- as.numeric(b$west); south <- as.numeric(b$south)
   east <- as.numeric(b$east); north <- as.numeric(b$north)
-  img_uri <- knitr::image_uri(preview_png)
+  img_uri <- .fp_raster_uri(preview_png)
+  if (is.null(img_uri)) return(NULL)
 
   read_gj <- function(name) {
     path <- file.path(d, "overlays", name)
@@ -119,7 +140,9 @@ flagged_parcel_has_context <- function(parcel_id) {
   height_meta <- .fp_read_json(file.path(height_dir, "height_layers_meta.json"))
   uri_or_null <- function(path) {
     if (is.null(path) || !file.exists(path)) return("null")
-    jsonlite::toJSON(knitr::image_uri(path), auto_unbox = TRUE)
+    u <- .fp_raster_uri(path)
+    if (is.null(u)) return("null")
+    jsonlite::toJSON(u, auto_unbox = TRUE)
   }
   chm_strata_png <- .fp_find_file(
     height_dir,
@@ -224,6 +247,17 @@ flagged_parcel_has_context <- function(parcel_id) {
     "  transition:background 0.2s ease; user-select:none;\n",
     "}\n",
     "#", map_id, " .fp-panel-toggle:hover { background:rgba(25,30,35,0.95); }\n",
+    "#", map_id, " .fp-expand-toggle {\n",
+    "  position:absolute; top:10px; right:78px; z-index:1001; background:rgba(15,20,25,0.92);\n",
+    "  color:#e8eef7; border:1px solid #2a3a4f; border-radius:4px; padding:6px 10px; cursor:pointer;\n",
+    "  font:600 12px system-ui,-apple-system,sans-serif; box-shadow:0 2px 8px rgba(0,0,0,0.3);\n",
+    "  transition:background 0.2s ease; user-select:none;\n",
+    "}\n",
+    "#", map_id, " .fp-expand-toggle:hover { background:rgba(25,30,35,0.95); }\n",
+    "#", map_id, ".fp-map-expanded, #", map_id, ".fp-map-expanded.fp-leaflet-map {\n",
+    "  position:fixed !important; inset:12px; z-index:10000; height:auto !important; width:auto !important;\n",
+    "  min-height:0 !important; border-radius:10px; box-shadow:0 12px 40px rgba(0,0,0,0.45);\n",
+    "}\n",
     "#", map_id, " .fp-layer-panel h3 { margin:0 0 0.35rem; font-size:0.72rem; text-transform:uppercase; letter-spacing:0.04em; color:#8b9bb4; }\n",
     "#", map_id, " .fp-layer-group { margin:0.55rem 0 0.25rem; font-size:0.68rem; text-transform:uppercase; letter-spacing:0.04em; color:#8b9bb4; }\n",
     "#", map_id, " .fp-layer { display:flex; gap:0.4rem; align-items:flex-start; padding:0.22rem 0.1rem; }\n",
@@ -235,7 +269,8 @@ flagged_parcel_has_context <- function(parcel_id) {
     "</style>\n",
     "<div id=\"", map_id, "\" class=\"fp-leaflet-map\" role=\"img\" aria-label=\"",
     .fp_escape_html(parcel_id), " hillshade with layer toggles\">\n",
-    "<button id=\"", panel_id, "-toggle\" class=\"fp-panel-toggle\" aria-label=\"Toggle layer panel\" aria-expanded=\"false\">Layers</button>\n",
+    "<button id=\"", map_id, "-expand\" class=\"fp-expand-toggle\" type=\"button\" aria-label=\"Expand map\" aria-pressed=\"false\">Expand</button>\n",
+    "<button id=\"", panel_id, "-toggle\" class=\"fp-panel-toggle\" type=\"button\" aria-label=\"Toggle layer panel\" aria-expanded=\"false\">Layers</button>\n",
     "<div id=\"", panel_id, "\" class=\"fp-layer-panel fp-collapsed\" aria-label=\"Map layers\">\n",
     "<h3>Layers</h3>\n",
     panel_rasters,
@@ -355,6 +390,18 @@ flagged_parcel_has_context <- function(parcel_id) {
     "        toggleBtn.setAttribute('aria-expanded', 'false');\n",
     "        toggleBtn.textContent = 'Layers';\n",
     "      }\n",
+    "    });\n",
+    "  }\n",
+    "  // Expand / shrink map (fixed overlay; invalidateSize on toggle)\n",
+    "  var expandBtn = document.getElementById('", map_id, "-expand');\n",
+    "  if (expandBtn) {\n",
+    "    L.DomEvent.disableClickPropagation(expandBtn);\n",
+    "    expandBtn.addEventListener('click', function(e){\n",
+    "      e.stopPropagation();\n",
+    "      var open = el.classList.toggle('fp-map-expanded');\n",
+    "      expandBtn.setAttribute('aria-pressed', open ? 'true' : 'false');\n",
+    "      expandBtn.textContent = open ? 'Close' : 'Expand';\n",
+    "      setTimeout(function(){ map.invalidateSize(); map.fitBounds(bounds, {padding:[40,40]}); }, 50);\n",
     "    });\n",
     "  }\n",
     "  // Fit to hillshade extent with generous padding so map fills the view nicely\n",
@@ -584,32 +631,13 @@ emit_flagged_parcel_context <- function(parcel_id) {
     cat("<p class=\"flagged-context-pad\"><em>", .fp_escape_html(pad_note), "</em></p>\n", sep = "")
   }
 
-  # Stacked one-column layout: photo first, then full-width hillshade
-  # (no sidebar / no shared-width photo+map row). Mobile/iPad friendly.
+  # Two-column layout on desktop: map (primary) | photo (secondary).
+  # Stacks on narrow viewports. Expand control grows the map to a fixed overlay.
   photo <- .fp_find_photo(d)
-  cat("<div class=\"flagged-context-stack\">\n")
-
-  cat("<div class=\"flagged-context-photo\">\n")
-  if (!is.null(photo)) {
-    ident <- if (!is.null(photo$meta$IDENT)) photo$meta$IDENT else basename(photo$path)
-    visit <- if (!is.null(photo$meta$visit_date_iso)) photo$meta$visit_date_iso else NULL
-    cat(
-      '<figure class="flagged-photo"><img src="',
-      knitr::image_uri(photo$path),
-      '" alt="', .fp_escape_html(paste(parcel_id, "representative photo", ident)),
-      '"/>',
-      "<figcaption><strong>", .fp_escape_html(ident), "</strong>",
-      if (!is.null(visit)) paste0(" · ", .fp_escape_html(visit)) else "",
-      " (AGOL / LPT start-point attachment)</figcaption></figure>\n",
-      sep = ""
-    )
-  } else {
-    cat("<p class=\"flagged-photo-missing\"><em>No representative photo asset for this parcel.</em></p>\n")
-  }
-  cat("</div>\n") # photo
+  cat("<div class=\"flagged-context-stack flagged-context-two-col\">\n")
 
   cat("<div class=\"flagged-context-map flagged-context-map-full\">\n")
-  cat("<p class=\"flagged-map-kicker\"><strong>LiDAR map</strong> — hillshade + optional CHM / height / SAM layers (use panel)</p>\n")
+  cat("<p class=\"flagged-map-kicker\"><strong>LiDAR map</strong> — hillshade + optional CHM / height / SAM layers (Layers / Expand)</p>\n")
   map_html <- NULL
   if (!is.null(preview_png)) {
     map_html <- tryCatch(
@@ -625,6 +653,27 @@ emit_flagged_parcel_context <- function(parcel_id) {
   }
   cat(map_html)
   cat("</div>\n") # map
+
+  cat("<div class=\"flagged-context-photo\">\n")
+  if (!is.null(photo)) {
+    ident <- if (!is.null(photo$meta$IDENT)) photo$meta$IDENT else basename(photo$path)
+    visit <- if (!is.null(photo$meta$visit_date_iso)) photo$meta$visit_date_iso else NULL
+    photo_src <- .fp_raster_uri(photo$path)
+    if (is.null(photo_src)) photo_src <- knitr::image_uri(photo$path)
+    cat(
+      '<figure class="flagged-photo"><img src="',
+      photo_src,
+      '" alt="', .fp_escape_html(paste(parcel_id, "representative photo", ident)),
+      '"/>',
+      "<figcaption><strong>", .fp_escape_html(ident), "</strong>",
+      if (!is.null(visit)) paste0(" · ", .fp_escape_html(visit)) else "",
+      " (AGOL / LPT start-point attachment)</figcaption></figure>\n",
+      sep = ""
+    )
+  } else {
+    cat("<p class=\"flagged-photo-missing\"><em>No representative photo asset for this parcel.</em></p>\n")
+  }
+  cat("</div>\n") # photo
   cat("</div>\n") # stack
 
   tbl <- tryCatch(.fp_decade_rank_table_html(parcel_id, d), error = function(e) {

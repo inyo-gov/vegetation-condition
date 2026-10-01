@@ -994,7 +994,7 @@ table.dataTable tfoot tr > .dtfc-fixed-left {
   margin: 0.35rem 0 0.55rem;
 }
 .flagged-context-pad { color: #607d8b; font-size: 0.85rem; }
-/* One-column stack: photo → full-width hillshade → spp-rank (no sidebar). */
+/* Two-column on desktop: map (primary) | photo. Stacks on narrow viewports. */
 .flagged-context-stack {
   display: flex;
   flex-direction: column;
@@ -1002,14 +1002,38 @@ table.dataTable tfoot tr > .dtfc-fixed-left {
   margin-bottom: 0.85rem;
   width: 100%;
 }
+.flagged-context-two-col {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  align-items: start;
+}
+@media (min-width: 960px) {
+  .flagged-context-two-col {
+    grid-template-columns: minmax(0, 1.55fr) minmax(240px, 0.85fr);
+  }
+}
 .flagged-context-photo {
   width: 100%;
-  max-width: 720px; /* photo reads well without competing with hillshade */
+  max-width: 720px;
+}
+.flagged-context-two-col .flagged-context-photo {
+  max-width: none;
 }
 .flagged-context-map,
 .flagged-context-map-full {
   width: 100%;
   min-width: 0;
+}
+.fp-leaflet-map.fp-map-expanded {
+  position: fixed !important;
+  inset: 12px;
+  z-index: 10000;
+  height: auto !important;
+  width: auto !important;
+  min-height: 0 !important;
+  border-radius: 10px;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.45);
 }
 .flagged-context-map-full {
   border: 1px solid #cfd8dc;
