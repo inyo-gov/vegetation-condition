@@ -27,8 +27,8 @@ Helper `code/R/flagged_parcel_context.R` → `.fp_inline_leaflet_html` emits a f
 **Thresholds (BWMA liberal_v1, site-consistent):** small-shrub **0.3–3.0 m**; tree **≥3.0 m**. Strata: 1 &lt;0.5 · 2 0.5–1.5 · 3 1.5–3 · 4 &gt;3 m.  
 CHM source: `lidar-data/.../ind026_ind029_2022/ind026_ind029_2022_chm_0p5m_spikefiltered.tif` clipped to hillshade frame. Build: `lidar-data/scripts/build_ind026_chm_height_layers.py`.
 
-| `heterogeneity/IND026_labeled_segments_web_wgs84.geojson` | Research overlay: LPT-labeled SAM segments (n=4; simplified) |
-| `heterogeneity/IND026_sam_outlines_web_wgs84.geojson` | Faint outlines of all SAM polys (n=209; simplified) |
-| `heterogeneity/research_overlay_meta.json` | Overlay meta + residual_matrix training note |
+| `heterogeneity/IND026_labeled_segments_web_wgs84.geojson` | Research overlay: LPT-labeled SAM segments (n=12; denser-v2; simplified) |
+| `heterogeneity/IND026_sam_outlines_web_wgs84.geojson` | Faint outlines of all SAM polys (n=495; denser-v2; simplified) |
+| `heterogeneity/research_overlay_meta.json` | Overlay meta — residual gap closed; 16/16 LPT in sam_amg |
 
 **Research overlay only** — not vegetation TYPE; not I.C.1.b. Pattern reusable for IND029 / TIN064 when `height/` + optional `heterogeneity/` assets exist.

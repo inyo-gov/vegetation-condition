@@ -8,7 +8,7 @@ Owens Valley vegetation-condition LPT / NDVI / parcel-profile monitoring stack (
 ### 2026-09-30 PT — IND026 SAM research overlay on profile (**live**)
 - Research overlay only (not TYPE / not I.C.1.b): labeled SAM segments (n=4) + faint all-SAM outlines (n=209) on existing IND026 hillshade Leaflet frame.
 - Assets: `www/flagged_parcel_maps/IND026/heterogeneity/` (web-simplified GeoJSON + meta). Helper: `code/R/flagged_parcel_context.R`.
-- Page note: 12/16 LPT starts in residual_matrix seg 204 — training sparse until denser AMG.
+- Page note: **Residual gap closed — 16/16 LPT in sam_amg; 12 labeled AMG segments** (Eco denser-v2). www labeled n=12 + outlines n=495.
 - ICM: `docs/2026-09-30_ind026-sam-research-overlay.md`. Live: https://icwd-vegetation-condition.vercel.app/docs/parcel_profiles.html#thibaut-sawmill--parcel-ind026
 
 
@@ -21,15 +21,14 @@ Owens Valley vegetation-condition LPT / NDVI / parcel-profile monitoring stack (
 
 
 
-### 2026-09-30 PT — IND026 LPT→SAM segment join (eco **built**)
-- Eco join: 16/16 `lpt_points_view` starts → **4** unique segments; LPT year **2022** (exact NAIP match). Research overlay only (eco workflow / geo workflow).
-- Overlap: prefer `sam_amg`, then max `pred_iou`, then max `area_m2`. Multi-hit: unweighted mean. Secondary SPAI/ARTR2/ATTO/ERNA10 gated (≥2 hits or abs≥10%).
-- Top shrub_abs: seg 23=20.0 (ARTR2 17.0), seg 7=18.0 (ERNA10 14.0), seg 204=17.0 (n=12 residual; ATTO 9.92), seg 4=8.5 (SPAI 2.5).
-- Exports: `exports/naip_segment_lpt_2026-09-30/`. ICM: `docs/2026-09-30_naip-segment-lpt-join-IND026.md`. Runner: `code/run_ind026_naip_segment_lpt_join_2026-09-30.py`.
-- Gap: 12/16 starts in residual_matrix seg 204 — AMG density low for training holdout. No git push / email.
+### 2026-09-30 PT — IND026 LPT→SAM segment join (eco **built**; **v2 re-join**)
+- Eco re-join on Geo denser SAM **v2** (canonical GPKG n=495): 16/16 starts → **12** unique AMG segments; **0** residual; LPT **2022**. Research overlay only.
+- v1 was 4 labeled (4 AMG + 12 residual in seg 204). Overlap/agg/gates unchanged. Spectral-by-dominant refreshed (conda:sam).
+- Exports: `exports/naip_segment_lpt_2026-09-30/` (overwritten). ICM: `docs/2026-09-30_naip-segment-lpt-join-IND026.md`. Runner: `code/run_ind026_naip_segment_lpt_join_2026-09-30.py`.
+- Desk overlay refresh **done** 2026-09-30 (~18:22 PT): www n=12/495; Vercel prod redeploy from Desk.
 
 ### 2026-09-30 PT — IND026 within-parcel NAIP→SAM heterogeneity (geo **built**)
-- Geo product: `../lidar-data/data/processed/flagged_parcel_hillshade/IND026/heterogeneity/segments/IND026_naip2022_sam_segments.gpkg` (n=209; Eco keys). **Eco next:** join `lpt_points_view` → labels per advise ICM.
+- Geo product: `../lidar-data/.../IND026/heterogeneity/segments/IND026_naip2022_sam_segments.gpkg` (**v2** n=495; Eco keys). Eco LPT→segment join **re-run** 2026-09-30.
 - ICM: `docs/2026-09-30_ind026-within-parcel-heterogeneity-mvp.md`. Research overlay only.
 
 ### 2026-09-30 PT — NAIP RGB segment × LPT training advise (IND026 MVP)
@@ -128,3 +127,7 @@ Owens Valley vegetation-condition LPT / NDVI / parcel-profile monitoring stack (
 - New-build order: **IND026 → IND029 → TIN064**; these are the clearest transition-first cases with LiDAR and photos on disk.
 - LAW052 remains the existing hillshade/photo/spp-rank reference, with an inflated-baseline caveat; no UI in this pass.
 - Decision note: `docs/2026-09-30_flagged-mvp-c-to-b-pivot.md`.
+
+## IND026 SAM denser-v2 overlay (2026-09-30 ~18:22 PT)
+
+Eco denser-v2 re-join shipped to profile: labeled **12**, outlines **495**, residual gap closed (16/16 LPT in sam_amg). BWMA layer toggles kept.

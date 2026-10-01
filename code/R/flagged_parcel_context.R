@@ -359,7 +359,7 @@ flagged_parcel_has_context <- function(parcel_id) {
       caveat <- if (!is.null(hetero_meta) && !is.null(hetero_meta$note) && nzchar(hetero_meta$note)) {
         .fp_escape_html(hetero_meta$note)
       } else {
-        "12/16 LPT starts fall in residual_matrix seg 204 — training sparse until denser AMG"
+        "Residual gap closed — 16/16 LPT starts in sam_amg; 12 labeled AMG segments (Eco denser-v2)"
       }
       paste0(
         "<div class=\"fp-research-overlay-note\">\n",

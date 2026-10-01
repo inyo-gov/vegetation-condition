@@ -3,15 +3,22 @@
   "research_overlay": true,
   "not_type": true,
   "not_ic1b": true,
-  "n_labeled": 4,
-  "n_sam_outlines": 209,
-  "note": "12/16 LPT starts in residual_matrix seg 204 \u2014 training sparse until denser AMG",
+  "n_labeled": 12,
+  "n_sam_outlines": 495,
+  "note": "Residual gap closed \u2014 16/16 LPT starts in sam_amg; 12 labeled AMG segments (Eco denser-v2)",
   "naip_year": 2022,
   "lpt_year": 2022,
+  "sam_version": "v2",
+  "simplify_tol_m": {
+    "labeled": 2.5,
+    "outlines": 8
+  },
   "sources": {
     "labeled": "/Users/zac/workspace/vegetation-condition/exports/naip_segment_lpt_2026-09-30/IND026_labeled_segments_wgs84.geojson",
-    "all_sam": "/Users/zac/workspace/lidar-data/data/processed/flagged_parcel_hillshade/IND026/heterogeneity/segments/IND026_naip2022_sam_segments_wgs84.geojson",
-    "labels_csv": "/Users/zac/workspace/vegetation-condition/exports/naip_segment_lpt_2026-09-30/IND026_segment_training_labels.csv"
+    "all_sam": "/Users/zac/workspace/lidar-data/data/processed/flagged_parcel_hillshade/IND026/heterogeneity/segments/IND026_naip2022_sam_segments_v2_wgs84.geojson",
+    "labels_csv": "/Users/zac/workspace/vegetation-condition/exports/naip_segment_lpt_2026-09-30/IND026_segment_training_labels.csv",
+    "join_summary": "/Users/zac/workspace/vegetation-condition/exports/naip_segment_lpt_2026-09-30/IND026_join_summary.json"
   },
-  "built": "2026-09-30"
+  "built": "2026-09-30",
+  "built_pt": "2026-09-30 18:15 PT"
 }
