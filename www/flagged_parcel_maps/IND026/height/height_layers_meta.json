@@ -1,0 +1,56 @@
+{
+  "parcel": "IND026",
+  "built": "2026-09-30T17:19:56-07:00",
+  "chm_source": "/Users/zac/workspace/lidar-data/data/processed/ind026_ind029_2022/ind026_ind029_2022_chm_0p5m_spikefiltered.tif",
+  "frame_match": "/Users/zac/workspace/lidar-data/data/processed/flagged_parcel_hillshade/IND026/IND026_hillshade_0p5m.tif",
+  "res_m": 0.5,
+  "thresholds_m": {
+    "small_shrub": [
+      0.3,
+      3.0
+    ],
+    "tree": [
+      3.0,
+      null
+    ],
+    "note": "BWMA liberal_v1 site-consistent bins; dryland label = small-shrub (not emergent)",
+    "strata": {
+      "1_short": "<0.5",
+      "2": "0.5\u20131.5",
+      "3": "1.5\u20133",
+      "4_tree": ">3"
+    }
+  },
+  "web_filters": {
+    "shrub_min_area_m2": 80.0,
+    "tree_min_area_m2": 25.0,
+    "simplify_m": 3.0,
+    "raster_preview": "half-res PNG ImageOverlay (same WGS84 bounds as hillshade)"
+  },
+  "counts": {
+    "n_small_shrub_polys": 215,
+    "n_tree_polys": 140,
+    "px_small_shrub": 1277096,
+    "px_tree": 287897
+  },
+  "chm_stats_m": {
+    "p50": 0.1546630859375,
+    "p90": 1.2745361328125,
+    "p99": 11.555419921875,
+    "max": 30.0
+  },
+  "web_preferred": {
+    "chm": "IND026_chm_height_strata_preview.png",
+    "chm_continuous_optional": "IND026_chm_preview.png",
+    "small_shrub_raster": "IND026_small_shrub_mask.png",
+    "tree_raster": "IND026_tree_mask.png",
+    "small_shrub_vector": "IND026_small_shrub_web_wgs84.geojson",
+    "tree_vector": "IND026_tree_web_wgs84.geojson"
+  },
+  "web_embed": {
+    "chm_strata_png": "IND026_chm_height_strata_preview.png",
+    "small_shrub_mask_png": "IND026_small_shrub_mask.png",
+    "tree_mask_png": "IND026_tree_mask.png",
+    "note": "PNG ImageOverlays (half-res masks; full-res strata). Desk vectors remain under lidar-data/.../height/"
+  }
+}

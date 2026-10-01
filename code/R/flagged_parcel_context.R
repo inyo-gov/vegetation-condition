@@ -75,6 +75,8 @@ flagged_parcel_has_context <- function(parcel_id) {
 }
 
 #' Inline Leaflet ImageOverlay + GeoJSON as a self-contained HTML fragment (no htmlwidget).
+#' BWMA-preview-style layer panel (checkboxes) so hillshade / CHM / height bins / SAM
+#' can be toggled without hunting clicks. Reusable for any parcel with www/flagged_parcel_maps/{PCL}/.
 .fp_inline_leaflet_html <- function(parcel_id, d, bounds, preview_png) {
   b <- bounds$bounds_wgs84
   if (is.null(b) || !all(c("west", "south", "east", "north") %in% names(b))) {
@@ -88,7 +90,6 @@ flagged_parcel_has_context <- function(parcel_id) {
     path <- file.path(d, "overlays", name)
     if (!file.exists(path)) return("null")
     raw <- paste(readLines(path, warn = FALSE, encoding = "UTF-8"), collapse = "\n")
-    # Validate JSON then re-emit compact
     parsed <- tryCatch(jsonlite::fromJSON(raw, simplifyVector = FALSE), error = function(e) NULL)
     if (is.null(parsed)) return("null")
     jsonlite::toJSON(parsed, auto_unbox = TRUE, null = "null")
@@ -99,7 +100,7 @@ flagged_parcel_has_context <- function(parcel_id) {
   starts <- read_gj("transect_starts_All_2026_wgs84.geojson")
   photo_pt <- read_gj("representative_photo_point_wgs84.geojson")
 
-  # Optional research overlay (IND026 SAM × LPT) — not TYPE / not I.C.1.b
+  # Optional research overlay (SAM × LPT) — not TYPE / not I.C.1.b
   read_hetero <- function(name) {
     path <- file.path(d, "heterogeneity", name)
     if (!file.exists(path)) return("null")
@@ -113,9 +114,37 @@ flagged_parcel_has_context <- function(parcel_id) {
   hetero_meta <- .fp_read_json(file.path(d, "heterogeneity", "research_overlay_meta.json"))
   has_hetero <- !identical(sam_outlines, "null") || !identical(labeled_segs, "null")
 
-  map_id <- paste0("fp-map-", gsub("[^A-Za-z0-9]", "", parcel_id), "-", as.integer(runif(1, 1e6, 9e6)))
+  # Optional CHM / height-class PNG overlays (BWMA-consistent bins)
+  height_dir <- file.path(d, "height")
+  height_meta <- .fp_read_json(file.path(height_dir, "height_layers_meta.json"))
+  uri_or_null <- function(path) {
+    if (is.null(path) || !file.exists(path)) return("null")
+    jsonlite::toJSON(knitr::image_uri(path), auto_unbox = TRUE)
+  }
+  chm_strata_png <- .fp_find_file(
+    height_dir,
+    c(paste0("^", parcel_id, "_chm_height_strata_preview\\.png$"), "_chm_height_strata_preview\\.png$")
+  )
+  shrub_mask_png <- .fp_find_file(
+    height_dir,
+    c(paste0("^", parcel_id, "_small_shrub_mask\\.png$"), "_small_shrub_mask\\.png$")
+  )
+  tree_mask_png <- .fp_find_file(
+    height_dir,
+    c(paste0("^", parcel_id, "_tree_mask\\.png$"), "_tree_mask\\.png$")
+  )
+  chm_uri <- uri_or_null(chm_strata_png)
+  shrub_uri <- uri_or_null(shrub_mask_png)
+  tree_uri <- uri_or_null(tree_mask_png)
+  has_height <- !identical(chm_uri, "null") || !identical(shrub_uri, "null") || !identical(tree_uri, "null")
 
-  # Leaflet CSS/JS from the installed package (inlined for self-contained Quarto)
+  shrub_lo <- if (!is.null(height_meta$thresholds_m$small_shrub[[1]])) height_meta$thresholds_m$small_shrub[[1]] else 0.3
+  shrub_hi <- if (!is.null(height_meta$thresholds_m$small_shrub[[2]])) height_meta$thresholds_m$small_shrub[[2]] else 3.0
+  tree_lo <- if (!is.null(height_meta$thresholds_m$tree[[1]])) height_meta$thresholds_m$tree[[1]] else 3.0
+
+  map_id <- paste0("fp-map-", gsub("[^A-Za-z0-9]", "", parcel_id), "-", as.integer(runif(1, 1e6, 9e6)))
+  panel_id <- paste0(map_id, "-layers")
+
   leaflet_css_path <- system.file("htmlwidgets/lib/leaflet/leaflet.css", package = "leaflet")
   leaflet_js_path <- system.file("htmlwidgets/lib/leaflet/leaflet.js", package = "leaflet")
   if (!nzchar(leaflet_css_path) || !nzchar(leaflet_js_path) ||
@@ -123,36 +152,115 @@ flagged_parcel_has_context <- function(parcel_id) {
     return(NULL)
   }
   css <- paste(readLines(leaflet_css_path, warn = FALSE), collapse = "\n")
-  # Escape </style> in CSS if any
   css <- gsub("</", "<\\/", css, fixed = TRUE)
   js_lib <- paste(readLines(leaflet_js_path, warn = FALSE), collapse = "\n")
   js_lib <- gsub("</", "<\\/", js_lib, fixed = TRUE)
 
   img_json <- jsonlite::toJSON(img_uri, auto_unbox = TRUE)
 
+  # BWMA-style checkbox rows (only include layers that exist)
+  layer_row <- function(id_suffix, checked, swatch, label, hint = NULL) {
+    paste0(
+      "<div class=\"fp-layer\">",
+      "<input type=\"checkbox\" id=\"", map_id, "-", id_suffix, "\"",
+      if (isTRUE(checked)) " checked" else "", "/>",
+      "<span class=\"fp-swatch\" style=\"background:", swatch, "\"></span>",
+      "<label for=\"", map_id, "-", id_suffix, "\">", label,
+      if (!is.null(hint) && nzchar(hint)) paste0("<span class=\"fp-hint\">", hint, "</span>") else "",
+      "</label></div>\n"
+    )
+  }
+
+  panel_rasters <- paste0(
+    "<div class=\"fp-layer-group\">Rasters</div>\n",
+    layer_row("lyr-hs", TRUE, "#9e9e9e", "Hillshade", "0.5 m Sierra 2022"),
+    if (!identical(chm_uri, "null")) {
+      layer_row("lyr-chm", FALSE, "linear-gradient(90deg,#2e7d32,#fbc02d,#fb8c00,#c62828)",
+                "CHM height strata", "1&lt;0.5 · 2 0.5–1.5 · 3 1.5–3 · 4 &gt;3 m")
+    } else "",
+    if (!identical(shrub_uri, "null")) {
+      layer_row("lyr-shrub", FALSE, "#fb8c00", "Small-shrub",
+                paste0(shrub_lo, "–", shrub_hi, " m (BWMA liberal_v1)"))
+    } else "",
+    if (!identical(tree_uri, "null")) {
+      layer_row("lyr-tree", FALSE, "#c62828", "Tree",
+                paste0("&gt;", tree_lo, " m"))
+    } else ""
+  )
+
+  panel_vectors <- paste0(
+    "<div class=\"fp-layer-group\">Vectors</div>\n",
+    layer_row("lyr-boundary", TRUE, "#ffcc00", "Parcel boundary", NULL),
+    layer_row("lyr-adjoining", TRUE, "#4fc3f7", "Adjoining parcels", NULL),
+    layer_row("lyr-starts", TRUE, "#e53935", "Transect starts", "All_2026"),
+    layer_row("lyr-photo", TRUE, "#ff9800", "Photo point", NULL),
+    if (!identical(sam_outlines, "null")) {
+      layer_row("lyr-sam", FALSE, "#90a4ae", "SAM outlines",
+                paste0("n=", if (!is.null(hetero_meta$n_sam_outlines)) hetero_meta$n_sam_outlines else "?",
+                       " · research"))
+    } else "",
+    if (!identical(labeled_segs, "null")) {
+      layer_row("lyr-labeled", TRUE, "#5d4037", "SAM labeled",
+                paste0("n=", if (!is.null(hetero_meta$n_labeled)) hetero_meta$n_labeled else "?",
+                       " · LPT lifeform"))
+    } else ""
+  )
+
   paste0(
     "<style type=\"text/css\">\n", css, "\n",
-    "#", map_id, " { height: 520px; width: 100%; background:#1a1a1a; border-radius:6px; }\n",
+    "#", map_id, " { height: 560px; width: 100%; background:#1a1a1a; border-radius:6px; position:relative; }\n",
+    "#", map_id, " .fp-layer-panel {\n",
+    "  position:absolute; top:10px; right:10px; z-index:1000; width:250px; max-height:calc(100% - 20px);\n",
+    "  overflow:auto; background:rgba(15,20,25,0.92); color:#e8eef7; border:1px solid #2a3a4f;\n",
+    "  border-radius:8px; padding:0.5rem 0.55rem 0.65rem; font: 12px/1.35 system-ui,-apple-system,sans-serif;\n",
+    "  box-shadow:0 4px 16px rgba(0,0,0,0.35);\n",
+    "}\n",
+    "#", map_id, " .fp-layer-panel h3 { margin:0 0 0.35rem; font-size:0.72rem; text-transform:uppercase; letter-spacing:0.04em; color:#8b9bb4; }\n",
+    "#", map_id, " .fp-layer-group { margin:0.55rem 0 0.25rem; font-size:0.68rem; text-transform:uppercase; letter-spacing:0.04em; color:#8b9bb4; }\n",
+    "#", map_id, " .fp-layer { display:flex; gap:0.4rem; align-items:flex-start; padding:0.22rem 0.1rem; }\n",
+    "#", map_id, " .fp-layer label { flex:1; cursor:pointer; font-size:0.78rem; color:#e8eef7; }\n",
+    "#", map_id, " .fp-hint { display:block; color:#8b9bb4; font-size:0.65rem; margin-top:0.08rem; }\n",
+    "#", map_id, " .fp-swatch { width:12px; height:12px; border-radius:2px; border:1px solid #445; flex-shrink:0; margin-top:2px; }\n",
+    "#", map_id, " .fp-layer-panel input[type=checkbox] { margin-top:2px; accent-color:#3b9eff; }\n",
+    "#", map_id, " .leaflet-control-layers { font-size:12px; }\n",
     "</style>\n",
     "<div id=\"", map_id, "\" class=\"fp-leaflet-map\" role=\"img\" aria-label=\"",
-    .fp_escape_html(parcel_id), " hillshade with overlays\"></div>\n",
+    .fp_escape_html(parcel_id), " hillshade with layer toggles\">\n",
+    "<div id=\"", panel_id, "\" class=\"fp-layer-panel\" aria-label=\"Map layers\">\n",
+    "<h3>Layers</h3>\n",
+    panel_rasters,
+    panel_vectors,
+    "</div>\n",
+    "</div>\n",
     "<script type=\"text/javascript\">\n", js_lib, "\n",
     "(function(){\n",
     "  var el = document.getElementById('", map_id, "');\n",
     "  if (!el || typeof L === 'undefined') return;\n",
     "  var map = L.map(el, {scrollWheelZoom:false, zoomControl:true, attributionControl:true});\n",
     "  var bounds = L.latLngBounds([", south, ",", west, "],[", north, ",", east, "]);\n",
-    "  L.imageOverlay(", img_json, ", bounds, {opacity:0.98, interactive:false}).addTo(map);\n",
-    "  function addGj(gj, style, pointToLayer, onEach){\n",
-    "    if (!gj) return;\n",
-    "    L.geoJSON(gj, {style:style, pointToLayer:pointToLayer, onEachFeature:onEach}).addTo(map);\n",
+    "  var overlays = {};\n",
+    "  function addImg(uri, key, opacity){\n",
+    "    if (!uri) return null;\n",
+    "    var lyr = L.imageOverlay(uri, bounds, {opacity:opacity, interactive:false});\n",
+    "    overlays[key] = lyr;\n",
+    "    return lyr;\n",
     "  }\n",
-    # Research SAM outlines (faint) under labeled fills
-    "  addGj(", sam_outlines, ", function(f){\n",
+    "  function addGj(gj, key, style, pointToLayer, onEach, addNow){\n",
+    "    if (!gj) return null;\n",
+    "    var lyr = L.geoJSON(gj, {style:style, pointToLayer:pointToLayer, onEachFeature:onEach});\n",
+    "    overlays[key] = lyr;\n",
+    "    if (addNow) lyr.addTo(map);\n",
+    "    return lyr;\n",
+    "  }\n",
+    "  addImg(", img_json, ", 'hs', 0.98).addTo(map);\n",
+    if (!identical(chm_uri, "null")) paste0("  addImg(", chm_uri, ", 'chm', 0.82);\n") else "",
+    if (!identical(shrub_uri, "null")) paste0("  addImg(", shrub_uri, ", 'shrub', 0.75);\n") else "",
+    if (!identical(tree_uri, "null")) paste0("  addImg(", tree_uri, ", 'tree', 0.8);\n") else "",
+    "  addGj(", sam_outlines, ", 'sam', function(f){\n",
     "    var origin = (f.properties && f.properties.mask_origin) || '';\n",
     "    return {color: origin === 'residual_matrix' ? '#78909c' : '#90a4ae', weight:0.7, fill:false, opacity:0.35, dashArray: origin === 'residual_matrix' ? '2 3' : null};\n",
-    "  });\n",
-    "  addGj(", labeled_segs, ", function(f){\n",
+    "  }, null, null, false);\n",
+    "  addGj(", labeled_segs, ", 'labeled', function(f){\n",
     "    var origin = (f.properties && f.properties.mask_origin) || '';\n",
     "    var shrub = (f.properties && f.properties.shrub_abs != null) ? Number(f.properties.shrub_abs) : 0;\n",
     "    var fill = origin === 'residual_matrix' ? '#607d8b' : (shrub >= 18 ? '#5d4037' : (shrub >= 12 ? '#8D6E63' : '#a1887f'));\n",
@@ -167,39 +275,81 @@ flagged_parcel_has_context <- function(parcel_id) {
     "    var html = '<strong>Research segment ' + sid + '</strong><br/>shrub_abs: ' + shrub + '<br/>top spp: ' + tops + '<br/>n_hits: ' + hits + (origin ? ('<br/>' + origin) : '');\n",
     "    layer.bindPopup(html);\n",
     "    layer.bindTooltip('seg ' + sid + ' · shrub ' + shrub, {sticky:true, direction:'top'});\n",
-    "  });\n",
-    "  addGj(", boundary, ", {color:'#ffcc00', weight:2.5, fill:false, opacity:1});\n",
-    "  addGj(", adjoining, ", {color:'#4fc3f7', weight:1.2, fillColor:'#4fc3f7', fillOpacity:0.08, opacity:0.85}, null, function(f, layer){\n",
+    "  }, true);\n",
+    "  addGj(", boundary, ", 'boundary', {color:'#ffcc00', weight:2.5, fill:false, opacity:1}, null, null, true);\n",
+    "  addGj(", adjoining, ", 'adjoining', {color:'#4fc3f7', weight:1.2, fillColor:'#4fc3f7', fillOpacity:0.08, opacity:0.85}, null, function(f, layer){\n",
     "    var id = (f.properties && (f.properties.PCL || f.properties.Parcel || f.properties.parcel)) || '';\n",
     "    if (id) layer.bindTooltip(String(id), {sticky:true, direction:'top'});\n",
-    "  });\n",
-    "  addGj(", starts, ", null, function(f, ll){\n",
+    "  }, true);\n",
+    "  addGj(", starts, ", 'starts', null, function(f, ll){\n",
     "    return L.circleMarker(ll, {radius:5, color:'#fff', weight:1, fillColor:'#e53935', fillOpacity:0.95});\n",
     "  }, function(f, layer){\n",
     "    var lab = (f.properties && (f.properties.IDENT || f.properties.Tag)) || 'transect';\n",
     "    layer.bindTooltip(String(lab), {sticky:true});\n",
-    "  });\n",
-    "  addGj(", photo_pt, ", null, function(f, ll){\n",
+    "  }, true);\n",
+    "  addGj(", photo_pt, ", 'photo', null, function(f, ll){\n",
     "    return L.circleMarker(ll, {radius:8, color:'#212121', weight:2, fillColor:'#ff9800', fillOpacity:1});\n",
     "  }, function(f, layer){\n",
     "    var lab = (f.properties && f.properties.IDENT) || 'photo';\n",
     "    layer.bindPopup('<strong>Photo point</strong><br/>' + String(lab));\n",
-    "  });\n",
+    "  }, true);\n",
+    "  function bindToggle(suffix, key){\n",
+    "    var cb = document.getElementById('", map_id, "-' + suffix);\n",
+    "    if (!cb || !overlays[key]) return;\n",
+    "    function sync(){\n",
+    "      if (cb.checked) { if (!map.hasLayer(overlays[key])) overlays[key].addTo(map); }\n",
+    "      else { if (map.hasLayer(overlays[key])) map.removeLayer(overlays[key]); }\n",
+    "    }\n",
+    "    cb.addEventListener('change', sync);\n",
+    "    sync();\n",
+    "  }\n",
+    "  bindToggle('lyr-hs', 'hs');\n",
+    "  bindToggle('lyr-chm', 'chm');\n",
+    "  bindToggle('lyr-shrub', 'shrub');\n",
+    "  bindToggle('lyr-tree', 'tree');\n",
+    "  bindToggle('lyr-boundary', 'boundary');\n",
+    "  bindToggle('lyr-adjoining', 'adjoining');\n",
+    "  bindToggle('lyr-starts', 'starts');\n",
+    "  bindToggle('lyr-photo', 'photo');\n",
+    "  bindToggle('lyr-sam', 'sam');\n",
+    "  bindToggle('lyr-labeled', 'labeled');\n",
+    "  // Also expose a compact L.control.layers for keyboard / mobile fallback\n",
+    "  var lcOverlays = {};\n",
+    "  if (overlays.hs) lcOverlays['Hillshade'] = overlays.hs;\n",
+    "  if (overlays.chm) lcOverlays['CHM height strata'] = overlays.chm;\n",
+    "  if (overlays.shrub) lcOverlays['Small-shrub'] = overlays.shrub;\n",
+    "  if (overlays.tree) lcOverlays['Tree'] = overlays.tree;\n",
+    "  if (overlays.boundary) lcOverlays['Parcel boundary'] = overlays.boundary;\n",
+    "  if (overlays.adjoining) lcOverlays['Adjoining'] = overlays.adjoining;\n",
+    "  if (overlays.starts) lcOverlays['Transect starts'] = overlays.starts;\n",
+    "  if (overlays.photo) lcOverlays['Photo point'] = overlays.photo;\n",
+    "  if (overlays.sam) lcOverlays['SAM outlines'] = overlays.sam;\n",
+    "  if (overlays.labeled) lcOverlays['SAM labeled'] = overlays.labeled;\n",
+    "  L.control.layers(null, lcOverlays, {collapsed:true, position:'bottomleft'}).addTo(map);\n",
+    "  // Keep panel from stealing map drag\n",
+    "  var panel = document.getElementById('", panel_id, "');\n",
+    "  if (panel) { L.DomEvent.disableClickPropagation(panel); L.DomEvent.disableScrollPropagation(panel); }\n",
     "  map.fitBounds(bounds, {padding:[12,12]});\n",
     "  setTimeout(function(){ map.invalidateSize(); }, 200);\n",
     "})();\n",
     "</script>\n",
-    "<p class=\"flagged-map-legend\"><span class=\"lg-b\">Yellow</span> parcel boundary · ",
+    "<p class=\"flagged-map-legend\"><span class=\"lg-b\">Yellow</span> parcel · ",
     "<span class=\"lg-a\">Cyan</span> adjoining · ",
-    "<span class=\"lg-t\">Red</span> transect starts · ",
-    "<span class=\"lg-p\">Orange</span> photo point",
+    "<span class=\"lg-t\">Red</span> starts · ",
+    "<span class=\"lg-p\">Orange</span> photo",
+    if (isTRUE(has_height)) {
+      paste0(
+        " · <span class=\"lg-chm\">CHM strata</span> / <span class=\"lg-shrub\">small-shrub ",
+        shrub_lo, "–", shrub_hi, " m</span> / <span class=\"lg-tree\">tree &gt;", tree_lo, " m</span>",
+        " (layer panel)"
+      )
+    } else {
+      ""
+    },
     if (isTRUE(has_hetero)) {
       paste0(
-        " · <span class=\"lg-sam\">Faint gray</span> all SAM outlines (n=",
-        if (!is.null(hetero_meta$n_sam_outlines)) hetero_meta$n_sam_outlines else "209",
-        ") · <span class=\"lg-lab\">Brown fill</span> LPT-labeled segments (n=",
-        if (!is.null(hetero_meta$n_labeled)) hetero_meta$n_labeled else "4",
-        "; dashed = residual_matrix)"
+        " · <span class=\"lg-sam\">SAM outlines</span> · <span class=\"lg-lab\">SAM labeled</span>",
+        " (optional toggles)"
       )
     } else {
       ""
@@ -214,9 +364,17 @@ flagged_parcel_has_context <- function(parcel_id) {
       paste0(
         "<div class=\"fp-research-overlay-note\">\n",
         "<p class=\"fp-research-badge\"><strong>Research overlay</strong> — NAIP 2022 SAM segments × LPT 2022 lifeform labels. ",
-        "Not vegetation TYPE · not I.C.1.b attributability.</p>\n",
+        "Not vegetation TYPE · not I.C.1.b attributability. Use the layer panel to toggle SAM / CHM / height bins.</p>\n",
         "<p class=\"fp-research-caveat\">", caveat,
         ". Popups show shrub_abs + top gated species (SPAI / ARTR2 / ATTO / ERNA10).</p>\n",
+        "</div>\n"
+      )
+    } else if (isTRUE(has_height)) {
+      paste0(
+        "<div class=\"fp-research-overlay-note\">\n",
+        "<p class=\"fp-research-badge\"><strong>Height layers</strong> — Sierra 2022 CHM clipped to hillshade frame. ",
+        "Small-shrub ", shrub_lo, "–", shrub_hi, " m · tree &gt;", tree_lo, " m (BWMA liberal_v1 bins). ",
+        "Not vegetation TYPE · not I.C.1.b.</p>\n",
         "</div>\n"
       )
     } else {
@@ -224,6 +382,7 @@ flagged_parcel_has_context <- function(parcel_id) {
     }
   )
 }
+
 
 .fp_static_map_html <- function(parcel_id, d) {
   overlay <- .fp_find_file(d, c(paste0("^", parcel_id, "_hillshade_context_overlay\\.png$"),
@@ -421,7 +580,7 @@ emit_flagged_parcel_context <- function(parcel_id) {
   cat("</div>\n") # photo
 
   cat("<div class=\"flagged-context-map flagged-context-map-full\">\n")
-  cat("<p class=\"flagged-map-kicker\"><strong>LiDAR hillshade</strong> — parcel-framed topographic context</p>\n")
+  cat("<p class=\"flagged-map-kicker\"><strong>LiDAR map</strong> — hillshade + optional CHM / height / SAM layers (use panel)</p>\n")
   map_html <- NULL
   if (!is.null(preview_png)) {
     map_html <- tryCatch(

@@ -1131,6 +1131,10 @@ body.quarto-dark .spp-rank-callout,
 
 .flagged-map-legend .lg-sam { color: #78909c; font-weight: 600; }
 .flagged-map-legend .lg-lab { color: #5d4037; font-weight: 600; }
+.flagged-map-legend .lg-chm { color: #f9a825; font-weight: 600; }
+.flagged-map-legend .lg-shrub { color: #ef6c00; font-weight: 600; }
+.flagged-map-legend .lg-tree { color: #c62828; font-weight: 600; }
+
 .fp-research-overlay-note {
   margin: 0.55rem 0 0.15rem;
   padding: 0.55rem 0.75rem;
