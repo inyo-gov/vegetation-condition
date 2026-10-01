@@ -99,6 +99,20 @@ flagged_parcel_has_context <- function(parcel_id) {
   starts <- read_gj("transect_starts_All_2026_wgs84.geojson")
   photo_pt <- read_gj("representative_photo_point_wgs84.geojson")
 
+  # Optional research overlay (IND026 SAM × LPT) — not TYPE / not I.C.1.b
+  read_hetero <- function(name) {
+    path <- file.path(d, "heterogeneity", name)
+    if (!file.exists(path)) return("null")
+    raw <- paste(readLines(path, warn = FALSE, encoding = "UTF-8"), collapse = "\n")
+    parsed <- tryCatch(jsonlite::fromJSON(raw, simplifyVector = FALSE), error = function(e) NULL)
+    if (is.null(parsed)) return("null")
+    jsonlite::toJSON(parsed, auto_unbox = TRUE, null = "null")
+  }
+  sam_outlines <- read_hetero(paste0(parcel_id, "_sam_outlines_web_wgs84.geojson"))
+  labeled_segs <- read_hetero(paste0(parcel_id, "_labeled_segments_web_wgs84.geojson"))
+  hetero_meta <- .fp_read_json(file.path(d, "heterogeneity", "research_overlay_meta.json"))
+  has_hetero <- !identical(sam_outlines, "null") || !identical(labeled_segs, "null")
+
   map_id <- paste0("fp-map-", gsub("[^A-Za-z0-9]", "", parcel_id), "-", as.integer(runif(1, 1e6, 9e6)))
 
   # Leaflet CSS/JS from the installed package (inlined for self-contained Quarto)
@@ -133,6 +147,27 @@ flagged_parcel_has_context <- function(parcel_id) {
     "    if (!gj) return;\n",
     "    L.geoJSON(gj, {style:style, pointToLayer:pointToLayer, onEachFeature:onEach}).addTo(map);\n",
     "  }\n",
+    # Research SAM outlines (faint) under labeled fills
+    "  addGj(", sam_outlines, ", function(f){\n",
+    "    var origin = (f.properties && f.properties.mask_origin) || '';\n",
+    "    return {color: origin === 'residual_matrix' ? '#78909c' : '#90a4ae', weight:0.7, fill:false, opacity:0.35, dashArray: origin === 'residual_matrix' ? '2 3' : null};\n",
+    "  });\n",
+    "  addGj(", labeled_segs, ", function(f){\n",
+    "    var origin = (f.properties && f.properties.mask_origin) || '';\n",
+    "    var shrub = (f.properties && f.properties.shrub_abs != null) ? Number(f.properties.shrub_abs) : 0;\n",
+    "    var fill = origin === 'residual_matrix' ? '#607d8b' : (shrub >= 18 ? '#5d4037' : (shrub >= 12 ? '#8D6E63' : '#a1887f'));\n",
+    "    return {color: origin === 'residual_matrix' ? '#37474f' : '#3e2723', weight:2.2, fillColor:fill, fillOpacity: origin === 'residual_matrix' ? 0.22 : 0.48, opacity:0.95, dashArray: origin === 'residual_matrix' ? '5 4' : null};\n",
+    "  }, null, function(f, layer){\n",
+    "    var p = f.properties || {};\n",
+    "    var sid = (p.segment_id != null) ? p.segment_id : '?';\n",
+    "    var shrub = (p.shrub_abs != null) ? Number(p.shrub_abs).toFixed(1) + '%' : '—';\n",
+    "    var tops = p.top_spp || '—';\n",
+    "    var hits = (p.n_hits != null) ? p.n_hits : '—';\n",
+    "    var origin = p.mask_origin || '';\n",
+    "    var html = '<strong>Research segment ' + sid + '</strong><br/>shrub_abs: ' + shrub + '<br/>top spp: ' + tops + '<br/>n_hits: ' + hits + (origin ? ('<br/>' + origin) : '');\n",
+    "    layer.bindPopup(html);\n",
+    "    layer.bindTooltip('seg ' + sid + ' · shrub ' + shrub, {sticky:true, direction:'top'});\n",
+    "  });\n",
     "  addGj(", boundary, ", {color:'#ffcc00', weight:2.5, fill:false, opacity:1});\n",
     "  addGj(", adjoining, ", {color:'#4fc3f7', weight:1.2, fillColor:'#4fc3f7', fillOpacity:0.08, opacity:0.85}, null, function(f, layer){\n",
     "    var id = (f.properties && (f.properties.PCL || f.properties.Parcel || f.properties.parcel)) || '';\n",
@@ -157,7 +192,36 @@ flagged_parcel_has_context <- function(parcel_id) {
     "<p class=\"flagged-map-legend\"><span class=\"lg-b\">Yellow</span> parcel boundary · ",
     "<span class=\"lg-a\">Cyan</span> adjoining · ",
     "<span class=\"lg-t\">Red</span> transect starts · ",
-    "<span class=\"lg-p\">Orange</span> photo point</p>\n"
+    "<span class=\"lg-p\">Orange</span> photo point",
+    if (isTRUE(has_hetero)) {
+      paste0(
+        " · <span class=\"lg-sam\">Faint gray</span> all SAM outlines (n=",
+        if (!is.null(hetero_meta$n_sam_outlines)) hetero_meta$n_sam_outlines else "209",
+        ") · <span class=\"lg-lab\">Brown fill</span> LPT-labeled segments (n=",
+        if (!is.null(hetero_meta$n_labeled)) hetero_meta$n_labeled else "4",
+        "; dashed = residual_matrix)"
+      )
+    } else {
+      ""
+    },
+    "</p>\n",
+    if (isTRUE(has_hetero)) {
+      caveat <- if (!is.null(hetero_meta) && !is.null(hetero_meta$note) && nzchar(hetero_meta$note)) {
+        .fp_escape_html(hetero_meta$note)
+      } else {
+        "12/16 LPT starts fall in residual_matrix seg 204 — training sparse until denser AMG"
+      }
+      paste0(
+        "<div class=\"fp-research-overlay-note\">\n",
+        "<p class=\"fp-research-badge\"><strong>Research overlay</strong> — NAIP 2022 SAM segments × LPT 2022 lifeform labels. ",
+        "Not vegetation TYPE · not I.C.1.b attributability.</p>\n",
+        "<p class=\"fp-research-caveat\">", caveat,
+        ". Popups show shrub_abs + top gated species (SPAI / ARTR2 / ATTO / ERNA10).</p>\n",
+        "</div>\n"
+      )
+    } else {
+      ""
+    }
   )
 }
 

@@ -1,5 +1,11 @@
 # TODO — vegetation-condition
 
+- [x] IND139 research-HUD theme + flexible annotations + grass:shrub stability (2026-09-30) — helpers `code/R/profile_theme.R` / `grass_shrub_metrics.R`; preview `exports/ind139_theme_2026-09-30/`; ICM `docs/2026-09-30_ind139-research-hud-grass-shrub.md`
+- [x] NAIP RGB within-parcel segments × LPT training (IND026 MVP) — advise + geo GPKG + **eco join built** 2026-09-30; exports `exports/naip_segment_lpt_2026-09-30/`; ICM `docs/2026-09-30_naip-segment-lpt-join-IND026.md`; 16/16 starts → 4 segments; LPT 2022; residual-matrix dominance gap; not TYPE / not CHM-object track
+
+- [x] Join IND026 SAM segments ← `lpt_points_view` (2026-09-30) — lifeform primary / gated SPAI·ARTR2·ATTO·ERNA10 secondary; research overlay only; see `docs/2026-09-30_naip-segment-lpt-join-IND026.md`
+- [x] Wire IND026 SAM × LPT **research overlay** on parcel profile hillshade (2026-09-30) — assets `www/flagged_parcel_maps/IND026/heterogeneity/`; ICM `docs/2026-09-30_ind026-sam-research-overlay.md`; not TYPE / not I.C.1.b; denser AMG retune stays optional
+- [ ] Optional Geo retune: raise SAM AMG density / planar dissolve so fewer IND026 starts sit in residual_matrix (12/16 in seg 204); then re-run eco join for more training segments
 - [x] Flagged-parcel context panel MVP **IND026** (hillshade ImageOverlay + photo + decade spp-rank) — assets `www/flagged_parcel_maps/IND026/`; helper `code/R/flagged_parcel_context.R`; ICM `docs/2026-09-30_ind026-profile-hillshade-spp-rank-ingest.md`; LAW052 remains method/geo reference
 
 - [x] 2026-09-30 May NDVI + LPT lifeform prior prototype (LAW052, FSL044) — research draft

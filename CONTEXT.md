@@ -5,6 +5,41 @@ Owens Valley vegetation-condition LPT / NDVI / parcel-profile monitoring stack (
 
 ## Status notes
 
+### 2026-09-30 PT — IND026 SAM research overlay on profile (**live**)
+- Research overlay only (not TYPE / not I.C.1.b): labeled SAM segments (n=4) + faint all-SAM outlines (n=209) on existing IND026 hillshade Leaflet frame.
+- Assets: `www/flagged_parcel_maps/IND026/heterogeneity/` (web-simplified GeoJSON + meta). Helper: `code/R/flagged_parcel_context.R`.
+- Page note: 12/16 LPT starts in residual_matrix seg 204 — training sparse until denser AMG.
+- ICM: `docs/2026-09-30_ind026-sam-research-overlay.md`. Live: https://icwd-vegetation-condition.vercel.app/docs/parcel_profiles.html#thibaut-sawmill--parcel-ind026
+
+
+
+### 2026-09-30 PT — IND139 research-HUD theme + grass:shrub annotations
+- Reusable theme/annotation helpers: `code/R/profile_theme.R`, `code/R/grass_shrub_metrics.R`; wired into `parcel_profiles.qmd`.
+- IND139: g:s largely stable since 2010 (mean 0.26; grass 20%±3 pp) but shifted vs 1985 baseline (g:s 0.59 → 0.28; Δgrass −16 pp).
+- Preview: `exports/ind139_theme_2026-09-30/IND139_profile_research_hud.png`. ICM: `docs/2026-09-30_ind139-research-hud-grass-shrub.md`.
+- Research framing only; IND026 SAM lane untouched.
+
+
+
+### 2026-09-30 PT — IND026 LPT→SAM segment join (eco **built**)
+- Eco join: 16/16 `lpt_points_view` starts → **4** unique segments; LPT year **2022** (exact NAIP match). Research overlay only (eco workflow / geo workflow).
+- Overlap: prefer `sam_amg`, then max `pred_iou`, then max `area_m2`. Multi-hit: unweighted mean. Secondary SPAI/ARTR2/ATTO/ERNA10 gated (≥2 hits or abs≥10%).
+- Top shrub_abs: seg 23=20.0 (ARTR2 17.0), seg 7=18.0 (ERNA10 14.0), seg 204=17.0 (n=12 residual; ATTO 9.92), seg 4=8.5 (SPAI 2.5).
+- Exports: `exports/naip_segment_lpt_2026-09-30/`. ICM: `docs/2026-09-30_naip-segment-lpt-join-IND026.md`. Runner: `code/run_ind026_naip_segment_lpt_join_2026-09-30.py`.
+- Gap: 12/16 starts in residual_matrix seg 204 — AMG density low for training holdout. No git push / email.
+
+### 2026-09-30 PT — IND026 within-parcel NAIP→SAM heterogeneity (geo **built**)
+- Geo product: `../lidar-data/data/processed/flagged_parcel_hillshade/IND026/heterogeneity/segments/IND026_naip2022_sam_segments.gpkg` (n=209; Eco keys). **Eco next:** join `lpt_points_view` → labels per advise ICM.
+- ICM: `docs/2026-09-30_ind026-within-parcel-heterogeneity-mvp.md`. Research overlay only.
+
+### 2026-09-30 PT — NAIP RGB segment × LPT training advise (IND026 MVP)
+- Research overlay only (not I.C.1.b / not Board policy). ICM: `docs/2026-09-30_naip-segment-lpt-training-advise.md`.
+- **LPT master / parcel_species:** attribute-only (no XY). IND026 starts **on disk** as geo overlays: `../lidar-data/data/processed/flagged_parcel_hillshade/IND026/overlays/IND026_transect_starts_lpt_points_view_wgs84.geojson` (16 pts; Parcel+TRANSECT) + All_2026 twin.
+- **Labels:** primary = lifeform abs % (shrub, perennial grass, annual, total) aggregated to **segment** containing hit(s); secondary = SPAI/ARTR2/ATTO/ERNA10 when ≥2 hits or high single-hit cover. Unit = segment poly; multi-hit → mean (default).
+- **Geo must supply:** segment_id, PCL=IND026, polygon CRS, optional naip_year/source. Eco does hit→segment join. Train only transect-overlapping segments; hold out segments/years. Caveats: pre-2015 vs permanent network; NAIP↔LPT year mismatch; not Green Book TYPE; CHM-object track stays parked.
+- Related paths: `../geoai/icwd/SEGMENTATION_AND_CLASSIFICATION_PLAN.md`; BWMA NAIP docs under lidar-data; IND105 CHM docs (different geometry).
+
+
 ### 2026-09-30 PT — IND026 spp-rank columns + layout fix
 - Decade table bug: dplyr `period` arg shadowed CSV column → every column repeated first-period ranks. Fixed with base-R `period_key` filter.
 - Layout: photo first → full-width LiDAR hillshade → ranks (no sidebar). Earliest reorder callout 2005 kept.

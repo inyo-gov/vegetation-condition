@@ -16,3 +16,11 @@ Source geo package: `lidar-data/data/processed/flagged_parcel_hillshade/IND026/`
 Species ranks: `exports/spp_rank_mvp_2026-09-30/IND026_*.csv`.
 
 No COG shipped here — profile uses PNG ImageOverlay (BWMA-style simpler path).
+
+| `heterogeneity/IND026_labeled_segments_web_wgs84.geojson` | Research overlay: LPT-labeled SAM segments (n=4; simplified) |
+| `heterogeneity/IND026_sam_outlines_web_wgs84.geojson` | Faint outlines of all SAM polys (n=209; simplified) |
+| `heterogeneity/research_overlay_meta.json` | Overlay meta + residual_matrix training note |
+| `heterogeneity/IND026_segment_training_labels.csv` | Segment lifeform / gated spp labels |
+| `heterogeneity/IND026_hit_segment_join.csv` | Hit→segment join table |
+
+**Research overlay only** — not vegetation TYPE; not I.C.1.b. Desk ICM: `docs/2026-09-30_ind026-sam-research-overlay.md`.
