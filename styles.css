@@ -1022,6 +1022,7 @@ table.dataTable tfoot tr > .dtfc-fixed-left {
   font-size: 0.95rem;
   color: #263238;
 }
+/* LiDAR map container: ensure full width and proper height for visibility */
 .flagged-context-map .leaflet-container,
 .flagged-context-map .html-widget,
 .flagged-context-map .fp-leaflet-map {
@@ -1029,6 +1030,14 @@ table.dataTable tfoot tr > .dtfc-fixed-left {
   overflow: hidden;
   border: 1px solid #cfd8dc;
   width: 100% !important;
+  min-height: 680px; /* Ensures map has sufficient height on all viewports */
+}
+@media (min-width: 768px) {
+  .flagged-context-map .leaflet-container,
+  .flagged-context-map .html-widget,
+  .flagged-context-map .fp-leaflet-map {
+    min-height: 720px; /* Taller on desktop/tablet for better context visibility */
+  }
 }
 .flagged-map-legend { font-size: 0.8rem; margin-top: 0.4rem; }
 .flagged-map-legend .lg-b { color: #c9a000; font-weight: 600; }
