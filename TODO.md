@@ -1,5 +1,6 @@
 # TODO — vegetation-condition
 
+- [x] Parcel profiles: remove Quarto TOC sidebar; in-flow jump nav (2026-10-01) — ICM `docs/2026-10-01_ind026-parcel-profiles-no-toc-sidebar.md`
 - [x] IND139 research-HUD theme + flexible annotations + grass:shrub stability (2026-09-30) — helpers `code/R/profile_theme.R` / `grass_shrub_metrics.R`; preview `exports/ind139_theme_2026-09-30/`; ICM `docs/2026-09-30_ind139-research-hud-grass-shrub.md`
 - [x] NAIP RGB within-parcel segments × LPT training (IND026 MVP) — advise + geo GPKG v2 + **eco join re-run** 2026-09-30; exports `exports/naip_segment_lpt_2026-09-30/`; ICM `docs/2026-09-30_naip-segment-lpt-join-IND026.md`; 16/16 starts → **12** AMG segments (0 residual); LPT 2022; not TYPE / not CHM-object track
 

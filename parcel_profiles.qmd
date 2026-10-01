@@ -5,9 +5,9 @@ author: "Inyo County Water Department"
 date: last-modified
 format:
   html:
-    toc: true
-    toc-depth: 3
+    toc: false
     number-sections: false
+    page-layout: full
 ---
 
 ```{r setup, include=FALSE, warning=FALSE, message=FALSE}
@@ -226,6 +226,22 @@ if (nrow(profile_parcels) == 0) {
   cat("No wellfield parcels meet the I.C.1.a flagged rule (cover or grass statistically below baseline for more than 5 years).")
 } else {
   cat("Profiling **", nrow(profile_parcels), "** wellfield parcels on the I.C.1.a flagged list (cover or grass statistically below baseline for more than 5 years).\n\n", sep = "")
+
+  # In-flow parcel jump nav (main panel) — replaces Quarto TOC sidebar column
+  cat('<nav class="fp-parcel-jump" aria-label="Flagged parcel jump links">\n')
+  cat('<p class="fp-parcel-jump-lead"><strong>Jump to parcel</strong> <span class="fp-parcel-jump-note">(in-page; no sidebar TOC)</span></p>\n')
+  cat('<ul class="fp-parcel-jump-list">\n')
+  for (ji in seq_len(nrow(profile_parcels))) {
+    jpid <- profile_parcels$Parcel[ji]
+    jwf <- as.character(profile_parcels$wellfield_group[ji])
+    jslug <- sub("-+$", "", gsub("[^a-z0-9]+", "-", tolower(jwf)))
+    janchor <- paste0(jslug, "--parcel-", tolower(jpid))
+    cat(
+      '<li><a href="#', janchor, '">', jwf, " — ", jpid, "</a></li>\n",
+      sep = ""
+    )
+  }
+  cat("</ul>\n</nav>\n\n")
 }
 
 last_year_if_nonneg <- function(year, delta) {

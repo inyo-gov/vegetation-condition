@@ -131,3 +131,8 @@ Owens Valley vegetation-condition LPT / NDVI / parcel-profile monitoring stack (
 ## IND026 SAM denser-v2 overlay (2026-09-30 ~18:22 PT)
 
 Eco denser-v2 re-join shipped to profile: labeled **12**, outlines **495**, residual gap closed (16/16 LPT in sam_amg). BWMA layer toggles kept.
+
+### 2026-10-01 PT — Parcel profiles: no Quarto TOC sidebar
+- Dropped TOC/margin column on `parcel_profiles` (`toc: false`, `fp-no-toc-sidebar`); in-flow `.fp-parcel-jump` nav in main panel.
+- Kept full-viewport `.fp-map-band` + Layers/Expand. ICM `docs/2026-10-01_ind026-parcel-profiles-no-toc-sidebar.md`.
+

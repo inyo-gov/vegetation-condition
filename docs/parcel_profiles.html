@@ -4032,6 +4032,70 @@ box-sizing: border-box;
 white-space: normal;
 overflow-wrap: break-word;
 }
+
+/* Flagged parcels: drop Quarto TOC column */
+#quarto-content.fp-no-toc-sidebar.page-columns,
+#quarto-content.page-columns.fp-no-toc-sidebar {
+display: grid !important;
+grid-template-columns: minmax(0, 1fr) !important;
+grid-template-areas: "main" !important;
+gap: 0 !important;
+max-width: var(--site-shell);
+width: 100%;
+}
+#quarto-content.fp-no-toc-sidebar > #quarto-margin-sidebar,
+#quarto-content.fp-no-toc-sidebar > .margin-sidebar {
+display: none !important;
+width: 0 !important;
+min-width: 0 !important;
+padding: 0 !important;
+margin: 0 !important;
+}
+#quarto-content.fp-no-toc-sidebar > main.content {
+grid-area: main !important;
+max-width: 100% !important;
+width: 100% !important;
+padding-right: 1.5rem;
+}
+.fp-parcel-jump {
+margin: 0.75rem 0 1.25rem;
+padding: 0.65rem 0.85rem 0.75rem;
+border: 1px solid var(--rule);
+border-radius: 8px;
+background: var(--surface);
+}
+.fp-parcel-jump-lead {
+margin: 0 0 0.45rem;
+font-family: "Source Sans 3", "Avenir Next", "Segoe UI", Helvetica, Arial, sans-serif;
+font-size: 0.95rem;
+}
+.fp-parcel-jump-note {
+color: var(--muted);
+font-weight: 400;
+font-size: 0.82rem;
+}
+.fp-parcel-jump-list {
+display: flex;
+flex-wrap: wrap;
+gap: 0.35rem 0.85rem;
+list-style: none;
+margin: 0;
+padding: 0;
+font-family: "Source Sans 3", "Avenir Next", "Segoe UI", Helvetica, Arial, sans-serif;
+font-size: 0.88rem;
+}
+.fp-parcel-jump-list a {
+text-decoration: none;
+border-bottom: 1px solid color-mix(in srgb, var(--ink) 25%, transparent);
+}
+.fp-parcel-jump-list a:hover {
+border-bottom-color: var(--ink);
+}
+.quarto-dark .fp-parcel-jump {
+background: #1e1e1e;
+border-color: #3a3a3a;
+}
+
 .figure {
 margin: 2rem 0;
 text-align: center;
@@ -5171,18 +5235,9 @@ body.quarto-dark .fp-research-caveat,
     </nav>
 </header>
 <!-- content -->
-<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar fp-no-toc-sidebar">
 <!-- sidebar -->
 <!-- margin-sidebar -->
-    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
-        <nav id="TOC" role="doc-toc" class="toc-active">
-    <h2 id="toc-title">On this page</h2>
-   
-  <ul>
-  <li><a href="#parcel-profiles" id="toc-parcel-profiles" class="nav-link active" data-scroll-target="#parcel-profiles">Parcel profiles</a></li>
-  </ul>
-</nav>
-    </div>
 <!-- main -->
 <main class="content page-columns page-full" id="quarto-document-content">
 
@@ -5243,6 +5298,26 @@ body.quarto-dark .fp-research-caveat,
 <h2 class="anchored" data-anchor-id="parcel-profiles">Parcel profiles</h2>
 <div class="cell page-columns page-full" data-layout-align="center">
 <p>Profiling <strong>13</strong> wellfield parcels on the I.C.1.a flagged list (cover or grass statistically below baseline for more than 5 years).</p>
+
+<nav class="fp-parcel-jump" aria-label="Flagged parcel jump links">
+<p class="fp-parcel-jump-lead"><strong>Jump to parcel</strong> <span class="fp-parcel-jump-note">(in-page; no sidebar TOC)</span></p>
+<ul class="fp-parcel-jump-list">
+<li><a href="#laws--parcel-fsl044">Laws — Parcel FSL044</a></li>
+<li><a href="#laws--parcel-fsl054">Laws — Parcel FSL054</a></li>
+<li><a href="#laws--parcel-law035">Laws — Parcel LAW035</a></li>
+<li><a href="#laws--parcel-law043">Laws — Parcel LAW043</a></li>
+<li><a href="#laws--parcel-law052">Laws — Parcel LAW052</a></li>
+<li><a href="#laws--parcel-law082">Laws — Parcel LAW082</a></li>
+<li><a href="#big-pine--parcel-fsp006">Big Pine — Parcel FSP006</a></li>
+<li><a href="#taboose-aberdeen--parcel-blk142">Taboose-Aberdeen — Parcel BLK142</a></li>
+<li><a href="#taboose-aberdeen--parcel-tin064">Taboose-Aberdeen — Parcel TIN064</a></li>
+<li><a href="#thibaut-sawmill--parcel-ind026">Thibaut Sawmill — Parcel IND026</a></li>
+<li><a href="#thibaut-sawmill--parcel-ind029">Thibaut Sawmill — Parcel IND029</a></li>
+<li><a href="#independence-oak--parcel-ind021">Independence Oak — Parcel IND021</a></li>
+<li><a href="#symmes-shepherd--parcel-ind139">Symmes Shepherd — Parcel IND139</a></li>
+</ul>
+</nav>
+
 <section id="laws--parcel-fsl044" class="level3 page-columns page-full">
 <h3 class="anchored" data-anchor-id="laws--parcel-fsl044">Laws — Parcel FSL044</h3>
 <div class="parcel-profile-layout page-columns page-full">

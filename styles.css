@@ -219,6 +219,71 @@ a:hover {
   overflow-wrap: break-word;
 }
 
+/* Flagged parcels (and any page marked fp-no-toc-sidebar): drop Quarto TOC column */
+#quarto-content.fp-no-toc-sidebar.page-columns,
+#quarto-content.page-columns.fp-no-toc-sidebar {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  grid-template-areas: "main" !important;
+  gap: 0 !important;
+  max-width: var(--site-shell);
+  width: 100%;
+}
+#quarto-content.fp-no-toc-sidebar > #quarto-margin-sidebar,
+#quarto-content.fp-no-toc-sidebar > .margin-sidebar {
+  display: none !important;
+  width: 0 !important;
+  min-width: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+#quarto-content.fp-no-toc-sidebar > main.content {
+  grid-area: main !important;
+  max-width: 100% !important;
+  width: 100% !important;
+  padding-right: 1.5rem;
+}
+
+/* In-flow parcel jump nav (replaces sidebar TOC on flagged profiles) */
+.fp-parcel-jump {
+  margin: 0.75rem 0 1.25rem;
+  padding: 0.65rem 0.85rem 0.75rem;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  background: var(--surface);
+}
+.fp-parcel-jump-lead {
+  margin: 0 0 0.45rem;
+  font-family: "Source Sans 3", "Avenir Next", "Segoe UI", Helvetica, Arial, sans-serif;
+  font-size: 0.95rem;
+}
+.fp-parcel-jump-note {
+  color: var(--muted);
+  font-weight: 400;
+  font-size: 0.82rem;
+}
+.fp-parcel-jump-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.85rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-family: "Source Sans 3", "Avenir Next", "Segoe UI", Helvetica, Arial, sans-serif;
+  font-size: 0.88rem;
+}
+.fp-parcel-jump-list a {
+  text-decoration: none;
+  border-bottom: 1px solid color-mix(in srgb, var(--ink) 25%, transparent);
+}
+.fp-parcel-jump-list a:hover {
+  border-bottom-color: var(--ink);
+}
+.quarto-dark .fp-parcel-jump {
+  background: #1e1e1e;
+  border-color: #3a3a3a;
+}
+
 .figure {
   margin: 2rem 0;
   text-align: center;
