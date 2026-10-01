@@ -865,47 +865,50 @@ table.dataTable tfoot tr > .dtfc-fixed-left {
   border-color: #d97706;
 }
 
-/* ---- Tufte-style margin figures on parcel profiles ---- */
+/* ---- Parcel profile layout: full-width map band, then content + figs ---- */
+/* No skinny left column beside NMDS/residuals — stack everything full width. */
 .parcel-profile-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(10.5rem, 16.5rem);
-  /* Column gutter: clear gap between left Support/Not-supported cards and right plots. */
-  gap: 0.75rem 1.5rem;
-  align-items: start;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  align-items: stretch;
   margin: 0 0 1.5rem;
+  width: 100%;
 }
 .parcel-profile-main {
   min-width: 0;
-  /* Breathing room on the right edge of left-column Support/Not-supported cards. */
-  padding-right: 0.65rem;
+  width: 100%;
+  padding-right: 0;
   box-sizing: border-box;
 }
 .parcel-profile-main .parcel-screening,
 .parcel-profile-main .parcel-cards {
-  margin-right: 0.35rem;
+  margin-right: 0;
 }
 .parcel-profile-main .parcel-card-support,
 .parcel-profile-main .parcel-card-not-supported {
-  margin-right: 0.25rem;
+  margin-right: 0;
 }
-.parcel-profile-margin {
-  position: sticky;
-  top: 3.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.55rem;
+/* Was Tufte sticky margin; now full-width diagnostics under map/main. */
+.parcel-profile-margin,
+.parcel-profile-diagnostics {
+  position: static;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
+  gap: 0.85rem 1.25rem;
   min-width: 0;
-  /* Page-edge breathing for Tufte side plots. */
-  padding-right: 1rem;
+  width: 100%;
+  padding-right: 0;
   box-sizing: border-box;
 }
 .parcel-margin-fig {
   margin: 0;
-  padding: 0.35rem 0.4rem 0.45rem;
+  padding: 0.45rem 0.55rem 0.55rem;
   border: 1px solid var(--rule);
   border-radius: 0.3rem;
   background: var(--surface);
   box-shadow: 0 1px 0 rgba(0,0,0,0.03);
+  width: 100%;
 }
 .parcel-margin-fig img {
   display: block;
@@ -914,10 +917,10 @@ table.dataTable tfoot tr > .dtfc-fixed-left {
   margin: 0;
 }
 .parcel-margin-caption {
-  margin: 0.28rem 0 0;
+  margin: 0.35rem 0 0;
   font-family: "Source Sans 3", "Avenir Next", "Segoe UI", Helvetica, Arial, sans-serif;
-  font-size: 0.68rem;
-  line-height: 1.25;
+  font-size: 0.75rem;
+  line-height: 1.3;
   color: var(--muted);
 }
 .parcel-margin-caption strong {
@@ -927,16 +930,7 @@ table.dataTable tfoot tr > .dtfc-fixed-left {
 .parcel-timeseries-block {
   clear: both;
   margin-top: 0.35rem;
-}
-@media (max-width: 64rem) {
-  .parcel-profile-layout {
-    grid-template-columns: 1fr;
-  }
-  .parcel-profile-margin {
-    position: static;
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
-  }
+  width: 100%;
 }
 
 .lifeform-swatch {
@@ -983,6 +977,25 @@ table.dataTable tfoot tr > .dtfc-fixed-left {
   border: 1px solid rgba(0, 0, 0, 0.12);
   border-radius: 8px;
   background: #fafafa;
+  width: 100%;
+  max-width: none;
+  box-sizing: border-box;
+}
+/* Full-bleed map band: use viewport width so map is not trapped beside Quarto TOC / skinny cols */
+.flagged-parcel-context.fp-map-band {
+  position: relative;
+  width: 100vw;
+  max-width: 100vw;
+  left: 50%;
+  right: 50%;
+  margin-left: -50vw;
+  margin-right: -50vw;
+  border-radius: 0;
+  border-left: none;
+  border-right: none;
+  padding-left: max(1rem, calc((100vw - min(100vw, var(--site-shell))) / 2 + 1.5rem));
+  padding-right: max(1rem, calc((100vw - min(100vw, var(--site-shell))) / 2 + 1.5rem));
+  box-sizing: border-box;
 }
 .flagged-context-lead,
 .flagged-context-pad,
@@ -994,7 +1007,7 @@ table.dataTable tfoot tr > .dtfc-fixed-left {
   margin: 0.35rem 0 0.55rem;
 }
 .flagged-context-pad { color: #607d8b; font-size: 0.85rem; }
-/* Two-column on desktop: map (primary) | photo. Stacks on narrow viewports. */
+/* Map full width on its own row; photo below (never starve map in a skinny col). */
 .flagged-context-stack {
   display: flex;
   flex-direction: column;
@@ -1003,27 +1016,25 @@ table.dataTable tfoot tr > .dtfc-fixed-left {
   width: 100%;
 }
 .flagged-context-two-col {
-  display: grid;
-  grid-template-columns: 1fr;
+  display: flex;
+  flex-direction: column;
   gap: 1rem;
-  align-items: start;
-}
-@media (min-width: 960px) {
-  .flagged-context-two-col {
-    grid-template-columns: minmax(0, 1.55fr) minmax(240px, 0.85fr);
-  }
+  align-items: stretch;
+  width: 100%;
 }
 .flagged-context-photo {
   width: 100%;
-  max-width: 720px;
+  max-width: 56rem; /* readable photo width under full-bleed map */
+  margin: 0 auto;
 }
 .flagged-context-two-col .flagged-context-photo {
-  max-width: none;
+  max-width: 56rem;
 }
 .flagged-context-map,
 .flagged-context-map-full {
   width: 100%;
   min-width: 0;
+  max-width: none;
 }
 .fp-leaflet-map.fp-map-expanded {
   position: fixed !important;
@@ -1040,13 +1051,14 @@ table.dataTable tfoot tr > .dtfc-fixed-left {
   border-radius: 8px;
   background: #eceff1;
   padding: 0.55rem 0.65rem 0.7rem;
+  width: 100%;
 }
 .flagged-map-kicker {
   margin: 0 0 0.45rem;
   font-size: 0.95rem;
   color: #263238;
 }
-/* LiDAR map container: ensure full width and proper height for visibility */
+/* LiDAR map: full content/viewport width + generous height */
 .flagged-context-map .leaflet-container,
 .flagged-context-map .html-widget,
 .flagged-context-map .fp-leaflet-map {
@@ -1054,13 +1066,20 @@ table.dataTable tfoot tr > .dtfc-fixed-left {
   overflow: hidden;
   border: 1px solid #cfd8dc;
   width: 100% !important;
-  min-height: 680px; /* Ensures map has sufficient height on all viewports */
+  min-height: 520px;
 }
 @media (min-width: 768px) {
   .flagged-context-map .leaflet-container,
   .flagged-context-map .html-widget,
   .flagged-context-map .fp-leaflet-map {
-    min-height: 720px; /* Taller on desktop/tablet for better context visibility */
+    min-height: 640px;
+  }
+}
+@media (min-width: 1200px) {
+  .flagged-context-map .leaflet-container,
+  .flagged-context-map .html-widget,
+  .flagged-context-map .fp-leaflet-map {
+    min-height: 720px;
   }
 }
 .flagged-map-legend { font-size: 0.8rem; margin-top: 0.4rem; }
@@ -1086,6 +1105,10 @@ table.dataTable tfoot tr > .dtfc-fixed-left {
 @media (max-width: 900px) {
   .flagged-context-photo { max-width: 100%; }
   .flagged-context-map-full { padding: 0.4rem 0.45rem 0.55rem; }
+  .flagged-parcel-context.fp-map-band {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
 }
 @media (max-width: 600px) {
   .flagged-context-stack { gap: 0.75rem; }

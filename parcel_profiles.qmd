@@ -1039,14 +1039,16 @@ for (i in seq_len(nrow(profile_parcels))) {
   anchor_id <- paste0(wf_slug, "--parcel-", tolower(pid))
   cat("\n\n### ", wf_group, " — Parcel ", pid, " {#", anchor_id, "}\n\n", sep = "")
 
-  cat('<div class="parcel-profile-layout">\n')
-  cat('<div class="parcel-profile-main">\n')
-  cat(build_parcel_cards(pid))
-  # Optional hillshade + photo + decade spp-rank (graceful skip if assets missing)
+  # Full-width map band first (when assets exist), then cards + figs below — never trap
+  # the map beside NMDS/residual margin or a skinny left column.
   if (exists("emit_flagged_parcel_context", mode = "function")) {
     tryCatch(emit_flagged_parcel_context(pid), error = function(e)
       message("flagged context skip for ", pid, ": ", e$message))
   }
+
+  cat('<div class="parcel-profile-layout">\n')
+  cat('<div class="parcel-profile-main">\n')
+  cat(build_parcel_cards(pid))
   cat('<div class="parcel-timeseries-block">\n')
 
   ts_raw <- parcels_deltas %>%
@@ -1438,7 +1440,7 @@ for (i in seq_len(nrow(profile_parcels))) {
   cat('</div>\n')  # parcel-timeseries-block
   cat('</div>\n')  # parcel-profile-main
 
-  # Tufte-style margin: NMDS path + NDVI residual diagnostic (sparklines / margin figs)
+  # Full-width diagnostics row (was Tufte sticky margin): NMDS + NDVI residual side-by-side
   nmds_png <- here::here("output", "figures", "nmds_parcels", paste0(pid, "_nmds.png"))
   if (!file.exists(nmds_png) && exists("nmds_index") && is.data.frame(nmds_index) && nrow(nmds_index) > 0) {
     hit <- nmds_index %>% dplyr::filter(.data$Parcel == pid, isTRUE(.data$nmds_ok))
@@ -1446,7 +1448,7 @@ for (i in seq_len(nrow(profile_parcels))) {
   }
   ndvi_diag_png <- here::here("output", "figures", "ndvi_residuals", paste0(pid, "_ndvi_residual.png"))
 
-  cat('<aside class="parcel-profile-margin" aria-label="Composition and NDVI diagnostics">\n')
+  cat('<aside class="parcel-profile-margin parcel-profile-diagnostics" aria-label="Composition and NDVI diagnostics">\n')
   if (file.exists(nmds_png)) {
     cat('<figure class="parcel-margin-fig">\n')
     cat('<img src="', knitr::image_uri(nmds_png), '" alt="', pid, ' valley-floor NMDS year path with same-TYPE baseline cloud"/>\n', sep = "")

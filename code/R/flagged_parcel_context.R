@@ -231,8 +231,9 @@ flagged_parcel_has_context <- function(parcel_id) {
 
   paste0(
     "<style type=\"text/css\">\n", css, "\n",
-    "#", map_id, " { height: 680px; width: 100%; background:#1a1a1a; border-radius:6px; position:relative; }\n",
-    "@media (min-width: 768px) { #", map_id, " { height: 720px; } }\n",
+    "#", map_id, " { height: 520px; width: 100%; background:#1a1a1a; border-radius:6px; position:relative; }\n",
+    "@media (min-width: 768px) { #", map_id, " { height: 640px; } }\n",
+    "@media (min-width: 1200px) { #", map_id, " { height: 720px; } }\n",
     "#", map_id, " .fp-layer-panel {\n",
     "  position:absolute; top:10px; right:10px; z-index:1000; width:250px; max-height:calc(100% - 20px);\n",
     "  overflow:auto; background:rgba(15,20,25,0.92); color:#e8eef7; border:1px solid #2a3a4f;\n",
@@ -617,7 +618,7 @@ emit_flagged_parcel_context <- function(parcel_id) {
     c(paste0("^", parcel_id, "_hillshade_preview\\.png$"), "_hillshade_preview\\.png$")
   )
 
-  cat('\n\n<div class="flagged-parcel-context">\n')
+  cat('\n\n<div class="flagged-parcel-context fp-map-band">\n')
   cat("<h4>Topographic context + photo</h4>\n")
   cat(
     "<p class=\"flagged-context-lead\">Parcel-framed hillshade (",
@@ -631,8 +632,8 @@ emit_flagged_parcel_context <- function(parcel_id) {
     cat("<p class=\"flagged-context-pad\"><em>", .fp_escape_html(pad_note), "</em></p>\n", sep = "")
   }
 
-  # Two-column layout on desktop: map (primary) | photo (secondary).
-  # Stacks on narrow viewports. Expand control grows the map to a fixed overlay.
+  # Full-width map band; photo stacked below (never starve map in a skinny column).
+  # Expand control grows the map to a fixed overlay. Layers panel stays collapsible.
   photo <- .fp_find_photo(d)
   cat("<div class=\"flagged-context-stack flagged-context-two-col\">\n")
 
